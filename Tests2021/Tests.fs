@@ -21,7 +21,7 @@ let rec Sweep (last: Option<int>) (rest: List<int>) : int =
 
 let SonarSweep depths : int = Sweep None depths
 
-type Tests(output: ITestOutputHelper) =
+type Part1(output: ITestOutputHelper) =
     [<Fact>]
     let ``My test`` () =
         Assert.Equal(
