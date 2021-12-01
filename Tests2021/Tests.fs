@@ -31,10 +31,10 @@ let rec Sweep (last: Option<int>) (rest: List<int>) : int =
 
 let CountIncreases depths : int = Sweep None depths
 
-let rec SlidingWindow (output: ITestOutputHelper) (depths: int list) =
+let rec SlidingWindow (depths: int list) =
     (depths |> Seq.take 3 |> Seq.sum)
     :: if depths.Length > 3 then
-           SlidingWindow output depths.Tail
+           SlidingWindow depths.Tail
        else
            []
 
@@ -57,8 +57,12 @@ type Part1(output: ITestOutputHelper) =
         Assert.Equal(7, testData |> CountIncreases)
 
     [<Fact>]
-    let ``Calculate sliding window totals`` () =
-        (testData |> SlidingWindow output)
+    let ``Calculate sliding window increases`` () =
+        Assert.Equal(5, testData |> SlidingWindow |> CountIncreases)
+
+    [<Fact>]
+    let ``Count sliding window totals`` () =
+        (testData |> SlidingWindow)
         |> shouldBeEquivalentsTo [ 607
                                    618
                                    618
@@ -74,6 +78,7 @@ type Part1(output: ITestOutputHelper) =
             File.ReadAllLines "data/day1input.txt"
             |> Array.toList
             |> List.map Int32.Parse
+            |> SlidingWindow
             |> CountIncreases
 
         output.WriteLine(result.ToString())
