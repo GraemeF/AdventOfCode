@@ -1,8 +1,11 @@
 module Tests
 
+open System
+open System.IO
 open Xunit
+open Xunit.Abstractions
 
-let IsDown a b = b < a
+let IsDeeper a b = b > a
 
 let rec Sweep (last: Option<int>) (rest: List<int>) : int =
     if rest.IsEmpty then
@@ -10,16 +13,19 @@ let rec Sweep (last: Option<int>) (rest: List<int>) : int =
     else
         let next = Some(rest.Head)
 
-        (if IsDown last next then 1 else 0)
+        (if last.IsSome && IsDeeper last next then
+             1
+         else
+             0)
         + Sweep next rest.Tail
 
 let SonarSweep depths : int = Sweep None depths
 
-type Tests() =
+type Tests(output: ITestOutputHelper) =
     [<Fact>]
     let ``My test`` () =
         Assert.Equal(
-            2,
+            7,
             [ 199
               200
               208
@@ -32,3 +38,13 @@ type Tests() =
               263 ]
             |> SonarSweep
         )
+
+    [<Fact>]
+    let ``for reals`` () =
+        let result =
+            File.ReadAllLines "data/day1input.txt"
+            |> Array.toList
+            |> List.map Int32.Parse
+            |> SonarSweep
+
+        output.WriteLine(result.ToString())
