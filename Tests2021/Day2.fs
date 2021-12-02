@@ -13,8 +13,16 @@ module Day2 =
         | up = 2
 
     type Step = { direction: Direction; distance: int }
-    type Position = { horizontal: int; depth: int }
-    let start: Position = { Position.horizontal = 0; depth = 0 }
+
+    type Position =
+        { horizontal: int
+          depth: int
+          aim: int }
+
+    let start: Position =
+        { Position.horizontal = 0
+          depth = 0
+          aim = 0 }
 
     let parseStep (step: string) =
         let parts = step.Split ' '
@@ -30,13 +38,14 @@ module Day2 =
         match step with
         | { Step.direction = Direction.up } ->
             { position with
-                  depth = position.depth - step.distance }
+                  aim = position.aim - step.distance }
         | { Step.direction = Direction.down } ->
             { position with
-                  depth = position.depth + step.distance }
+                  aim = position.aim + step.distance }
         | { Step.direction = Direction.forward } ->
             { position with
-                  horizontal = position.horizontal + step.distance }
+                  horizontal = position.horizontal + step.distance
+                  depth = position.depth + position.aim * step.distance }
         | _ -> ArgumentOutOfRangeException() |> raise
 
     let calculate (course: seq<Step>) : int =
@@ -54,8 +63,8 @@ down 8
 forward 2"
 
         [<Fact>]
-        let ``multiplies horizontal position by depth`` () =
-            Assert.Equal(150, calculate (testData.Split '\n' |> parseCourse))
+        let ``does the thing with aim`` () =
+            Assert.Equal(900, calculate (testData.Split '\n' |> parseCourse))
 
         [<Fact>]
         let ``for reals`` () =
