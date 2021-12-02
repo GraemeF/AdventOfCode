@@ -1,6 +1,7 @@
 namespace AdventOfCode
 
 open System
+open System.IO
 open Xunit
 open Xunit.Abstractions
 
@@ -23,7 +24,7 @@ module Day2 =
         { Step.direction = direction
           distance = distance }
 
-    let parseCourse (course: string) = course.Split '\n' |> Seq.map parseStep
+    let parseCourse course = course |> Seq.map parseStep
 
     let move (position: Position) (step: Step) =
         match step with
@@ -38,9 +39,8 @@ module Day2 =
                   horizontal = position.horizontal + step.distance }
         | _ -> ArgumentOutOfRangeException() |> raise
 
-    let calculate course =
-        let finalPosition =
-            course |> parseCourse |> Seq.fold move start
+    let calculate (course: seq<Step>) : int =
+        let finalPosition = course |> Seq.fold move start
 
         finalPosition.horizontal * finalPosition.depth
 
@@ -54,4 +54,14 @@ down 8
 forward 2"
 
         [<Fact>]
-        let ``multiplies horizontal position by depth`` () = Assert.Equal(150, calculate testData)
+        let ``multiplies horizontal position by depth`` () =
+            Assert.Equal(150, calculate (testData.Split '\n' |> parseCourse))
+
+        [<Fact>]
+        let ``for reals`` () =
+            let result =
+                File.ReadAllLines "data/day2input.txt"
+                |> parseCourse
+                |> calculate
+
+            output.WriteLine(result.ToString())
