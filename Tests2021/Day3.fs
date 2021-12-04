@@ -25,18 +25,34 @@ module Day3 =
         let zeros, ones = diagnosticReport |> countBits index
         if zeros > ones then 0 else 1
 
-    let getBitValue index shift diagnosticReport =
+    let getGammaRateBitValue index shift diagnosticReport =
         (getDominantBits index diagnosticReport) <<< shift
 
-    let findGammaRate (diagnosticReport: seq<string>) =
+    let getEpsilonRateBitValue index shift diagnosticReport =
+        (1 - (getDominantBits index diagnosticReport))
+        <<< shift
+
+    let calculateRate rateFunction (diagnosticReport: seq<string>) =
         let length = (diagnosticReport |> Seq.head).Length
 
         [ 0 .. length - 1 ]
         |> Seq.fold
             (fun total index ->
                 total
-                + (getBitValue index (length - index - 1) diagnosticReport))
+                + (rateFunction index (length - index - 1) diagnosticReport))
             0
+
+    let calculateGammaRate diagnosticReport =
+        calculateRate getGammaRateBitValue diagnosticReport
+
+    let calculateEpsilonRate diagnosticReport =
+        calculateRate getEpsilonRateBitValue diagnosticReport
+
+    let calculatePowerConsumption (diagnosticReport: seq<string>) =
+        let gammaRate = calculateGammaRate diagnosticReport
+        let epsilonRate = calculateEpsilonRate diagnosticReport
+
+        gammaRate * epsilonRate
 
     type Tests(output: ITestOutputHelper) =
 
@@ -55,5 +71,13 @@ module Day3 =
 01010"
 
         [<Fact>]
-        let ``Finds gamma rate`` () =
-            Assert.Equal(22, testData.Split '\n' |> findGammaRate)
+        let ``Calculates gamma rate`` () =
+            Assert.Equal(22, testData.Split '\n' |> calculateGammaRate)
+
+        [<Fact>]
+        let ``Calculates epsilon rate`` () =
+            Assert.Equal(9, testData.Split '\n' |> calculateEpsilonRate)
+
+        [<Fact>]
+        let ``Calculates power consumption`` () =
+            Assert.Equal(198, testData.Split '\n' |> calculatePowerConsumption)
