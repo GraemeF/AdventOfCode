@@ -1,5 +1,6 @@
 ﻿namespace AdventOfCode
 
+open System.IO
 open Xunit
 open Xunit.Abstractions
 
@@ -81,3 +82,11 @@ module Day3 =
         [<Fact>]
         let ``Calculates power consumption`` () =
             Assert.Equal(198, testData.Split '\n' |> calculatePowerConsumption)
+
+        [<Fact>]
+        let ``for reals`` () =
+            let result =
+                File.ReadAllLines "data/day3input.txt"
+                |> calculatePowerConsumption
+
+            output.WriteLine(result.ToString())
