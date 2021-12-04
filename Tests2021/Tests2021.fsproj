@@ -5,17 +5,22 @@
 
         <IsPackable>false</IsPackable>
         <GenerateProgramFile>false</GenerateProgramFile>
+        <LangVersion>6.0</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
         <Compile Include="Helpers.fs" />
         <Compile Include="Day1.fs" />
         <Compile Include="Day2.fs" />
+        <Compile Include="Day3.fs" />
         <Compile Include="Program.fs" />
         <Content Include="data\day1input.txt">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
         <Content Include="data\day2input.txt">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="data\day3input.txt">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
