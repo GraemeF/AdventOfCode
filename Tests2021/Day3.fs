@@ -33,10 +33,13 @@ module Day3 =
         (1 - (getDominantBits index diagnosticReport))
         <<< shift
 
-    let calculateRate rateFunction (diagnosticReport: seq<string>) =
+    let getBitIndexes (diagnosticReport: seq<string>) =
         let length = (diagnosticReport |> Seq.head).Length
-
-        [ 0 .. length - 1 ]
+        (length, [ 0 .. length - 1 ])
+        
+    let calculateRate rateFunction (diagnosticReport: seq<string>) =
+        let length, indexes =diagnosticReport |> getBitIndexes
+        indexes
         |> Seq.fold
             (fun total index ->
                 total
@@ -54,6 +57,17 @@ module Day3 =
         let epsilonRate = calculateEpsilonRate diagnosticReport
 
         gammaRate * epsilonRate
+
+    let filterCandidates candidates index =
+        candidates |> Seq.fold (fun candidates filterCandidates bitCriteria)
+        
+    let calculateRating bitCriteria diagnosticReport =
+        let length, indexes =diagnosticReport |> getBitIndexes
+        indexes |>
+            Seq.fold (filterCandidates diagnosticReport)
+    
+    let calculateOxygenScrubberRating diagnosticReport =
+        calculateRating (fun (zeros, ones) -> zeros > ones) diagnosticReport
 
     type Tests(output: ITestOutputHelper) =
 
@@ -84,7 +98,11 @@ module Day3 =
             Assert.Equal(198, testData.Split '\n' |> calculatePowerConsumption)
 
         [<Fact>]
-        let ``for reals`` () =
+        let ``Calculates oxygen generator rating`` () =
+            Assert.Equal(23, testData.Split '\n' |> calculateOxygenScrubberRating)
+
+        [<Fact>]
+        let ``Calculates power consumption with real data`` () =
             let result =
                 File.ReadAllLines "data/day3input.txt"
                 |> calculatePowerConsumption
