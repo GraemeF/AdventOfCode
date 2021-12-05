@@ -7,12 +7,48 @@ open Xunit.Abstractions
 
 module Day4 =
 
-    type Input = { drawnNumbers: seq<int> }
+    type Board = int [] []
+
+    type Input =
+        { drawnNumbers: seq<int>
+          boards: seq<Board> }
+
+    let parseBoardRow (input: string) : seq<int> =
+        input.Split ' '
+        |> Seq.filter (fun s -> not (String.IsNullOrWhiteSpace s))
+        |> Seq.map Convert.ToInt32
+
+    let parseBoard (input: seq<string>) : int [] [] =
+        input
+        |> Seq.map (fun line -> parseBoardRow line |> Seq.toArray)
+        |> Seq.toArray
+
+    let allEqual =
+        Array.forall2 (fun elem1 elem2 -> elem1 = elem2)
+
+    let boardEqual (a: int [] []) (b: int [] []) =
+        Seq.forall2 (fun a1 b1 -> allEqual a1 b1) a b
+
+    let rec parseBoards (input: seq<string>) : List<Board> =
+        if input |> Seq.isEmpty then
+            []
+        else
+            let isBoardRow =
+                fun (line: string) -> not (String.IsNullOrWhiteSpace line)
+
+            let rows =
+                input |> Seq.tail |> Seq.takeWhile isBoardRow
+
+            let remainingRows =
+                input |> Seq.tail |> Seq.skipWhile isBoardRow
+
+            (parseBoard rows) :: (parseBoards remainingRows)
 
     let parseInput (input: seq<string>) : Input =
         { drawnNumbers =
               (input |> Seq.head).Split ','
-              |> Seq.map Convert.ToInt32 }
+              |> Seq.map Convert.ToInt32
+          boards = input |> Seq.tail |> parseBoards }
 
     let getFinalScore input = 0
 
@@ -73,6 +109,33 @@ module Day4 =
                   1 ],
                 testData.drawnNumbers
             )
+
+        [<Fact>]
+        let ``Parses a board row`` () =
+            Assert.Equal([| 22; 13; 17; 11; 0 |], "22 13 17 11  0" |> parseBoardRow)
+
+        [<Fact>]
+        let ``Parses a board`` () =
+            let board =
+                [ "22 13 17 11  0"
+                  " 8  2 23  4 24"
+                  "21  9 14 16  7"
+                  " 6 10  3 18  5"
+                  " 1 12 20 15 19" ]
+                |> parseBoard
+
+            let expected =
+                [| [| 22; 13; 17; 11; 0 |]
+                   [| 8; 2; 23; 4; 24 |]
+                   [| 21; 9; 14; 16; 7 |]
+                   [| 6; 10; 3; 18; 5 |]
+                   [| 1; 12; 20; 15; 19 |] |]
+
+            Assert.True(boardEqual expected board)
+
+        [<Fact>]
+        let ``Parses boards`` () =
+            Assert.Equal(3, testData.boards |> Seq.length)
 
         [<Fact>]
         let ``Calculates final score`` () =
