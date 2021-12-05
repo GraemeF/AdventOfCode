@@ -1,10 +1,20 @@
 ﻿namespace AdventOfCode
 
+open System
 open System.IO
 open Xunit
 open Xunit.Abstractions
 
 module Day4 =
+
+    type Input = { drawnNumbers: seq<int> }
+
+    let parseInput (input: seq<string>) : Input =
+        { drawnNumbers =
+              (input |> Seq.head).Split ','
+              |> Seq.map Convert.ToInt32 }
+
+    let getFinalScore input = 0
 
     type Tests(output: ITestOutputHelper) =
 
@@ -29,11 +39,40 @@ module Day4 =
 22 11 13  6  5
  2  0 12  3  7"
 
-        let parseInput input = input
+        let testData = testDataInput.Split '\n' |> parseInput
 
-        let testData = testDataInput |> parseInput
-
-        let getFinalScore input = 0
+        [<Fact>]
+        let ``Parses drawn numbers`` () =
+            Assert.Equal(
+                [ 7
+                  4
+                  9
+                  5
+                  11
+                  17
+                  23
+                  2
+                  0
+                  14
+                  21
+                  24
+                  10
+                  16
+                  13
+                  6
+                  15
+                  25
+                  12
+                  22
+                  18
+                  20
+                  8
+                  19
+                  3
+                  26
+                  1 ],
+                testData.drawnNumbers
+            )
 
         [<Fact>]
         let ``Calculates final score`` () =
