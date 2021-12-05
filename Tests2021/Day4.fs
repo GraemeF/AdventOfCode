@@ -97,13 +97,29 @@ module Day4 =
           boards = boards
           lastCalledNumber = Some drawnNumber }
 
-    let getWinningBoard state : Option<Board> = state.boards |> Seq.tryFind isWinner
+    let getWinningBoards state : seq<Board> = state.boards |> Seq.filter isWinner
 
-    let rec play (state: BingoState) : Board * int =
-        if getWinningBoard state = None then
+    let rec play (state: BingoState) : List<Board * int> =
+        if state.boards |> Seq.isEmpty then
+            []
+        else if state |> getWinningBoards |> Seq.isEmpty then
             play (draw state)
         else
-            ((getWinningBoard state).Value, state.lastCalledNumber.Value)
+            let winningBoards = (getWinningBoards state)
+
+            let wins =
+                winningBoards
+                |> Seq.map (fun win -> (win, state.lastCalledNumber.Value))
+                |> Seq.toList
+
+            List.concat [ wins
+                          (play (
+                              draw
+                                  { state with
+                                        boards =
+                                            state.boards
+                                            |> Seq.except (wins |> Seq.map (fun (board, _) -> board)) }
+                          )) ]
 
     let sumUnmarkedNumbers (board: Board) =
         board
@@ -112,9 +128,12 @@ module Day4 =
         |> Seq.map (fun x -> x.number)
         |> Seq.sum
 
-    let getFinalScore state : int =
-        let winningBoard, lastCalledNumber = play state
+    let getFinalScore (winningBoard, lastCalledNumber) : int =
         sumUnmarkedNumbers winningBoard * lastCalledNumber
+
+    let getFirstWin state = play state |> Seq.head
+
+    let getLastWin state = play state |> Seq.last
 
     type Tests(output: ITestOutputHelper) =
 
@@ -239,14 +258,29 @@ module Day4 =
             )
 
         [<Fact>]
-        let ``Calculates final score`` () =
-            Assert.Equal(4512, testData |> getFinalScore)
+        let ``Calculates final score of first winning board`` () =
+            Assert.Equal(4512, testData |> getFirstWin |> getFinalScore)
 
         [<Fact>]
-        let ``Calculates final score with real data`` () =
+        let ``Calculates final score of last winning board`` () =
+            Assert.Equal(1924, testData |> getLastWin |> getFinalScore)
+
+        [<Fact>]
+        let ``Calculates final score of first winning board with real data`` () =
             let result =
                 File.ReadAllLines "data/day4input.txt"
                 |> parseInput
+                |> getFirstWin
+                |> getFinalScore
+
+            output.WriteLine(result.ToString())
+
+        [<Fact>]
+        let ``Calculates final score of last winning board with real data`` () =
+            let result =
+                File.ReadAllLines "data/day4input.txt"
+                |> parseInput
+                |> getLastWin
                 |> getFinalScore
 
             output.WriteLine(result.ToString())
