@@ -7,18 +7,18 @@ open Xunit.Abstractions
 
 module Day4 =
 
-    type Board = int [] []
+    type Board = Option<int> [] []
 
-    type Input =
+    type BingoState =
         { drawnNumbers: seq<int>
           boards: seq<Board> }
 
-    let parseBoardRow (input: string) : seq<int> =
+    let parseBoardRow (input: string) : seq<Option<int>> =
         input.Split ' '
         |> Seq.filter (fun s -> not (String.IsNullOrWhiteSpace s))
-        |> Seq.map Convert.ToInt32
+        |> Seq.map (fun n -> Some(Convert.ToInt32 n))
 
-    let parseBoard (input: seq<string>) : int [] [] =
+    let parseBoard (input: seq<string>) : Option<int> [] [] =
         input
         |> Seq.map (fun line -> parseBoardRow line |> Seq.toArray)
         |> Seq.toArray
@@ -26,7 +26,7 @@ module Day4 =
     let allEqual =
         Array.forall2 (fun elem1 elem2 -> elem1 = elem2)
 
-    let boardEqual (a: int [] []) (b: int [] []) =
+    let boardEqual (a: Board) (b: Board) =
         Seq.forall2 (fun a1 b1 -> allEqual a1 b1) a b
 
     let rec parseBoards (input: seq<string>) : List<Board> =
@@ -44,11 +44,31 @@ module Day4 =
 
             (parseBoard rows) :: (parseBoards remainingRows)
 
-    let parseInput (input: seq<string>) : Input =
+    let parseInput (input: seq<string>) : BingoState =
         { drawnNumbers =
               (input |> Seq.head).Split ','
               |> Seq.map Convert.ToInt32
           boards = input |> Seq.tail |> parseBoards }
+
+    let markRow (number: int) (row: Option<int> []) : Option<int> [] =
+        row
+        |> Array.map
+            (fun x ->
+                if (x.IsSome && x.Value = number) then
+                    None
+                else
+                    x)
+
+    let markBoard (number: int) (board: Board) : Board = board |> Array.map (markRow number)
+
+    let draw (state: BingoState) : BingoState =
+        let drawnNumber = state.drawnNumbers |> Seq.head
+
+        let boards: seq<Board> =
+            state.boards |> Seq.map (markBoard drawnNumber)
+
+        { drawnNumbers = state.drawnNumbers |> Seq.tail
+          boards = boards }
 
     let getFinalScore input = 0
 
@@ -112,7 +132,7 @@ module Day4 =
 
         [<Fact>]
         let ``Parses a board row`` () =
-            Assert.Equal([| 22; 13; 17; 11; 0 |], "22 13 17 11  0" |> parseBoardRow)
+            Assert.Equal(([| 22; 13; 17; 11; 0 |] |> Array.map Some), "22 13 17 11  0" |> parseBoardRow)
 
         [<Fact>]
         let ``Parses a board`` () =
@@ -131,7 +151,7 @@ module Day4 =
                    [| 6; 10; 3; 18; 5 |]
                    [| 1; 12; 20; 15; 19 |] |]
 
-            Assert.True(boardEqual expected board)
+            Assert.True(boardEqual (expected |> Array.map (Array.map Some)) board)
 
         [<Fact>]
         let ``Parses boards`` () =
