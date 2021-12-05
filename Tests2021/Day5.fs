@@ -24,6 +24,14 @@ module Day5 =
 
     let isHorizontalOrVertical ((a, b): Line) : bool = a.x = b.x || a.y = b.y
 
+    let getPoints ((a, b): Line) : seq<Coordinates> =
+        if a.y = b.y then
+            [ a.x .. b.x ]
+            |> Seq.map (fun n -> { x = n; y = a.y })
+        else
+            [ a.y .. b.y ]
+            |> Seq.map (fun n -> { x = a.x; y = n })
+
     type Tests(output: ITestOutputHelper) =
 
         let testDataInput =
@@ -50,7 +58,25 @@ module Day5 =
             )
 
         [<Fact>]
-        let ``Counts number of points with overlapping lines`` () =
+        let ``Gets points covered by a horizontal line`` () =
+            Assert.Equal(
+                [ { x = 2; y = 2 }
+                  { x = 3; y = 2 }
+                  { x = 4; y = 2 } ],
+                ({ x = 2; y = 2 }, { x = 4; y = 2 }) |> getPoints
+            )
+
+        [<Fact>]
+        let ``Gets points covered by a vertical line`` () =
+            Assert.Equal(
+                [ { x = 2; y = 2 }
+                  { x = 2; y = 3 }
+                  { x = 2; y = 4 } ],
+                ({ x = 2; y = 2 }, { x = 2; y = 4 }) |> getPoints
+            )
+
+        [<Fact>]
+        let ``Counts number of points with overlapping lines with real data`` () =
             let result =
                 File.ReadAllLines "data/day5input.txt"
                 |> parseInput
