@@ -24,13 +24,42 @@ module Day5 =
 
     let isHorizontalOrVertical ((a, b): Line) : bool = a.x = b.x || a.y = b.y
 
-    let getPoints ((a, b): Line) : seq<Coordinates> =
-        if a.y = b.y then
-            [ a.x .. b.x ]
-            |> Seq.map (fun n -> { x = n; y = a.y })
+    let getIncrement a b : int =
+        if a = b then 0
+        else if a < b then 1
+        else -1
+
+    let rec getPoints ((a, b): Line) : seq<Coordinates> =
+        if a = b then
+            [ a ]
         else
-            [ a.y .. b.y ]
-            |> Seq.map (fun n -> { x = a.x; y = n })
+            a
+            :: (getPoints (
+                    { x = a.x + getIncrement a.x b.x
+                      y = a.y + getIncrement a.y b.y },
+                    b
+                )
+                |> Seq.toList)
+
+    let countCoveringPoints (points: seq<Coordinates>) : Map<Coordinates, int> =
+        let increment =
+            fun (count: Option<int>) -> Some((if count.IsSome then count.Value else 0) + 1)
+
+        points
+        |> Seq.fold (fun (map: Map<Coordinates, int>) point -> map.Change(point, increment)) Map.empty
+
+    let countLinesCoveringPoints (lines: seq<Line>) : Map<Coordinates, int> =
+        lines
+        |> Seq.map getPoints
+        |> Seq.concat
+        |> countCoveringPoints
+
+    let countPointsCoveredBy2OrMoreLines (lines: seq<Line>) =
+        lines
+        |> countLinesCoveringPoints
+        |> Map.values
+        |> Seq.filter (fun n -> n > 1)
+        |> Seq.length
 
     type Tests(output: ITestOutputHelper) =
 
@@ -58,27 +87,82 @@ module Day5 =
             )
 
         [<Fact>]
+        let ``Gets points covered by a diagonal downward line`` () =
+            Assert.Equal(
+                [ { x = 1; y = 1 }
+                  { x = 2; y = 2 }
+                  { x = 3; y = 3 } ],
+                ({ x = 1; y = 1 }, { x = 3; y = 3 }) |> getPoints
+            )
+
+        [<Fact>]
+        let ``Gets points covered by a diagonal upward line`` () =
+            Assert.Equal(
+                [ { x = 9; y = 7 }
+                  { x = 8; y = 8 }
+                  { x = 7; y = 9 } ],
+                ({ x = 9; y = 7 }, { x = 7; y = 9 }) |> getPoints
+            )
+
+        [<Fact>]
         let ``Gets points covered by a horizontal line`` () =
             Assert.Equal(
-                [ { x = 2; y = 2 }
-                  { x = 3; y = 2 }
-                  { x = 4; y = 2 } ],
-                ({ x = 2; y = 2 }, { x = 4; y = 2 }) |> getPoints
+                [ { x = 1; y = 1 }
+                  { x = 1; y = 2 }
+                  { x = 1; y = 3 } ],
+                ({ x = 1; y = 1 }, { x = 1; y = 3 }) |> getPoints
             )
 
         [<Fact>]
         let ``Gets points covered by a vertical line`` () =
             Assert.Equal(
-                [ { x = 2; y = 2 }
-                  { x = 2; y = 3 }
-                  { x = 2; y = 4 } ],
-                ({ x = 2; y = 2 }, { x = 2; y = 4 }) |> getPoints
+                [ { x = 9; y = 7 }
+                  { x = 8; y = 7 }
+                  { x = 7; y = 7 } ],
+                ({ x = 9; y = 7 }, { x = 7; y = 7 }) |> getPoints
             )
+
+        [<Fact>]
+        let ``Counts number of times points are hit`` () =
+            let result =
+                [ { x = 2; y = 2 }
+                  { x = 2; y = 2 }
+                  { x = 2; y = 2 }
+                  { x = 1; y = 2 } ]
+                |> countCoveringPoints
+
+            Assert.Equal(2, result.Count)
+            Assert.Equal(3, result.Item({ x = 2; y = 2 }))
+            Assert.Equal(1, result.Item({ x = 1; y = 2 }))
+
+        [<Fact>]
+        let ``Counts number of points hit by 2 or more horizontal or vertical lines`` () =
+            Assert.Equal(
+                5,
+                testData
+                |> Seq.filter isHorizontalOrVertical
+                |> countPointsCoveredBy2OrMoreLines
+            )
+
+        [<Fact>]
+        let ``Counts number of points hit by 2 or more lines`` () =
+            Assert.Equal(12, testData |> countPointsCoveredBy2OrMoreLines)
+
+        [<Fact>]
+        let ``Counts number of points with overlapping horizontal or vertical lines with real data`` () =
+            let result =
+                File.ReadAllLines "data/day5input.txt"
+                |> parseInput
+                |> Seq.filter isHorizontalOrVertical
+                |> countPointsCoveredBy2OrMoreLines
+
+            output.WriteLine(result.ToString())
 
         [<Fact>]
         let ``Counts number of points with overlapping lines with real data`` () =
             let result =
                 File.ReadAllLines "data/day5input.txt"
                 |> parseInput
+                |> countPointsCoveredBy2OrMoreLines
 
             output.WriteLine(result.ToString())
