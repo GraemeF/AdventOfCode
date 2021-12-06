@@ -10,19 +10,23 @@ module Day6 =
     type Lanternfish = int
     type School = uint64 array
 
-    let createSchool: School = Array.create 9 0UL
-
     let simulateLanternfish (lanternfish: Lanternfish) : Lanternfish list =
         match lanternfish with
         | 0 -> [ 6; 8 ]
         | _ -> [ lanternfish - 1 ]
 
     let simulateSchool (school: School) : School =
-        let newSchool = createSchool
+        let newSchool = Array.create 9 0UL
+
+        for timer in [ 0 .. 8 ] do
+            Array.set newSchool timer 0UL
 
         for timer in [ 0 .. 8 ] do
             let qty = school.[timer]
-            Array.set newSchool timer qty
+            let newFish = simulateLanternfish timer
+
+            for newTimer in newFish do
+                Array.set newSchool newTimer (qty + newSchool.[newTimer])
 
         newSchool
 
@@ -36,7 +40,7 @@ module Day6 =
     let countFish (school: School) = school |> Seq.sum
 
     let parseInput (input: string) =
-        let school = createSchool
+        let school = Array.create 9 0UL
 
         input.Split ','
         |> Seq.map Convert.ToInt32
@@ -169,10 +173,26 @@ module Day6 =
 
         [<Fact>]
         let ``Counts lanternfish`` () =
+            Assert.Equal(
+                36UL,
+                [| 0UL
+                   1UL
+                   2UL
+                   3UL
+                   4UL
+                   5UL
+                   6UL
+                   7UL
+                   8UL |]
+                |> countFish
+            )
+
+        [<Fact>]
+        let ``Counts lanternfish after 18 days`` () =
             Assert.Equal(26UL, testData |> simulate 18 |> countFish)
 
         [<Fact>]
-        let ``Counts lanternfish`` () =
+        let ``Counts lanternfish after 256 days`` () =
             Assert.Equal(26984457539UL, testData |> simulate 256 |> countFish)
 
         [<Fact>]
@@ -181,6 +201,16 @@ module Day6 =
                 File.ReadAllText "data/day6input.txt"
                 |> parseInput
                 |> simulate 80
+                |> countFish
+
+            output.WriteLine(result.ToString())
+
+        [<Fact>]
+        let ``Counts lanternfish with real data`` () =
+            let result =
+                File.ReadAllText "data/day6input.txt"
+                |> parseInput
+                |> simulate 256
                 |> countFish
 
             output.WriteLine(result.ToString())
