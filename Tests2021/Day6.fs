@@ -19,17 +19,26 @@ module Day6 =
         school
         |> Seq.fold
             (fun (oldFish: Lanternfish list, newFish: Lanternfish list) lanternfish ->
-                ((lanternfish - 1) :: oldFish, newFish))
-            ([], [])
-        |> fun (oldFish, newFish) -> oldFish |> List.rev
+                let fish, spawn = simulateLanternfish lanternfish
 
-    let rec simulate days school =
+                (fish :: oldFish,
+                 if spawn.IsSome then
+                     spawn.Value :: newFish
+                 else
+                     newFish))
+            ([], [])
+        |> fun (oldFish, newFish) -> List.append (oldFish |> List.rev) newFish
+
+    let rec simulate days (school: School) =
         if days > 0 then
             school |> simulateSchool |> simulate (days - 1)
         else
             school
 
-    let parseInput (input: string) = input |> Seq.map Convert.ToInt32
+    let countFish (school: School) = school |> Seq.length
+
+    let parseInput (input: string) =
+        input.Split ',' |> Seq.map Convert.ToInt32
 
     type Tests(output: ITestOutputHelper) =
         let testDataInput = "3,4,3,1,2"
@@ -86,10 +95,15 @@ module Day6 =
             )
 
         [<Fact>]
+        let ``Counts lanternfish`` () =
+            Assert.Equal(26, testData |> simulate 18 |> countFish)
+
+        [<Fact>]
         let ``Simulates lanternfish with real data`` () =
             let result =
                 File.ReadAllText "data/day6input.txt"
                 |> parseInput
                 |> simulate 80
+                |> countFish
 
             output.WriteLine(result.ToString())
