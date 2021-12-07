@@ -1,6 +1,7 @@
 ﻿namespace AdventOfCode
 
 open System
+open System.IO
 open Xunit
 open Xunit.Abstractions
 
@@ -22,6 +23,11 @@ module Day7 =
         crabPositions
         |> Map.toSeq
         |> Seq.fold (fun totalFuel (position, crabs) -> totalFuel + abs (position - target) * crabs) 0
+
+    let calculateLeastFuelRequiredToAlign (crabPositions: Map<HorizontalPosition, int>) =
+        [ crabPositions.Keys |> Seq.min .. crabPositions.Keys |> Seq.max ]
+        |> Seq.map (fun target -> calculateFuelToMoveToPosition target crabPositions)
+        |> Seq.min
 
     type Tests(output: ITestOutputHelper) =
         let testDataInput = "16,1,2,0,4,2,7,1,2,14"
@@ -46,3 +52,17 @@ module Day7 =
         [<Fact>]
         let ``Calculates fuel required to move all crabs to position 10`` () =
             Assert.Equal(71, (testData |> calculateFuelToMoveToPosition 10))
+
+        [<Fact>]
+        let ``Calculates least amount of fuel required to align all crabs`` () =
+            Assert.Equal(37, (testData |> calculateLeastFuelRequiredToAlign))
+
+        [<Fact>]
+        let ``Calculates least amount of fuel required to align all crabs with real data`` () =
+            let result =
+                File.ReadAllText "data/day7input.txt"
+                |> parseInput
+                |> countCrabsAtEachPosition
+                |> calculateLeastFuelRequiredToAlign
+
+            output.WriteLine(result.ToString())
