@@ -19,10 +19,23 @@ module Day7 =
         positions
         |> Seq.fold (fun (map: Map<HorizontalPosition, int>) point -> map.Change(point, increment)) Map.empty
 
+    let rec calculateFuel steps =
+        if steps > 0 then
+            steps + calculateFuel (steps - 1)
+        else
+            0
+
+    let calculateFuelToMove target position =
+        calculateFuel (abs (target - position))
+
     let calculateFuelToMoveToPosition target (crabPositions: Map<HorizontalPosition, int>) =
         crabPositions
         |> Map.toSeq
-        |> Seq.fold (fun totalFuel (position, crabs) -> totalFuel + abs (position - target) * crabs) 0
+        |> Seq.fold
+            (fun totalFuel (position, crabs) ->
+                totalFuel
+                + (calculateFuelToMove target position) * crabs)
+            0
 
     let calculateLeastFuelRequiredToAlign (crabPositions: Map<HorizontalPosition, int>) =
         [ crabPositions.Keys |> Seq.min .. crabPositions.Keys |> Seq.max ]
@@ -38,24 +51,25 @@ module Day7 =
             |> countCrabsAtEachPosition
 
         [<Fact>]
+        let ``Calculates fuel required to move a number of steps`` () = Assert.Equal(6, calculateFuel 3)
+
+        [<Fact>]
+        let ``Calculates fuel required to move from 16 to 5`` () = Assert.Equal(66, calculateFuelToMove 16 5)
+
+        [<Fact>]
+        let ``Calculates fuel required to move from 1 to 5`` () = Assert.Equal(10, calculateFuelToMove 1 5)
+
+        [<Fact>]
         let ``Calculates fuel required to move all crabs to position 2`` () =
-            Assert.Equal(37, (testData |> calculateFuelToMoveToPosition 2))
+            Assert.Equal(206, (testData |> calculateFuelToMoveToPosition 2))
 
         [<Fact>]
-        let ``Calculates fuel required to move all crabs to position 1`` () =
-            Assert.Equal(41, (testData |> calculateFuelToMoveToPosition 1))
-
-        [<Fact>]
-        let ``Calculates fuel required to move all crabs to position 3`` () =
-            Assert.Equal(39, (testData |> calculateFuelToMoveToPosition 3))
-
-        [<Fact>]
-        let ``Calculates fuel required to move all crabs to position 10`` () =
-            Assert.Equal(71, (testData |> calculateFuelToMoveToPosition 10))
+        let ``Calculates fuel required to move all crabs to position 5`` () =
+            Assert.Equal(168, (testData |> calculateFuelToMoveToPosition 5))
 
         [<Fact>]
         let ``Calculates least amount of fuel required to align all crabs`` () =
-            Assert.Equal(37, (testData |> calculateLeastFuelRequiredToAlign))
+            Assert.Equal(168, (testData |> calculateLeastFuelRequiredToAlign))
 
         [<Fact>]
         let ``Calculates least amount of fuel required to align all crabs with real data`` () =
