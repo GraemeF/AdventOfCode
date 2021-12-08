@@ -1,0 +1,91 @@
+﻿namespace AdventOfCode
+
+open System
+open System.IO
+open Xunit
+open Xunit.Abstractions
+
+module Day8 =
+
+    type Entry =
+        { patterns: string array
+          output: string array }
+
+    let easyPatternLengths = [| 2; 3; 4; 7 |]
+
+    let parsePatterns (input: string) =
+        input.Split ' '
+        |> Seq.map (fun e -> e.Trim '|')
+        |> Seq.filter (fun s -> not (String.IsNullOrWhiteSpace s))
+
+    let parseEntry (input: string array) : Entry =
+        let uniqueSignalPatterns = input.[0] |> parsePatterns
+        let outputValue = input.[1] |> parsePatterns
+
+        { patterns = uniqueSignalPatterns |> Seq.toArray
+          output = outputValue |> Seq.toArray }
+
+    let parseInput (input: string seq) : Entry array =
+        input
+        |> Seq.map (fun s -> s.Split '|')
+        |> Seq.map parseEntry
+        |> Seq.toArray
+
+    let getEasyDigits (entries: Entry seq) =
+        entries
+        |> Seq.map (fun e -> e.output)
+        |> Seq.concat
+        |> Seq.filter (fun p -> easyPatternLengths |> Array.contains p.Length)
+
+    let countEasyDigits (entries: Entry seq) = entries |> getEasyDigits |> Seq.length
+
+    type Tests(output: ITestOutputHelper) =
+
+        let largerExample =
+            "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb | fdgacbe cefdb cefbgd gcbe
+edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec | fcgedb cgb dgebacf gc
+fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef | cg cg fdcagb cbg
+fbegcd cbd adcefb dageb afcb bc aefdc ecdab fgdeca fcdbega | efabcd cedba gadfec cb
+aecbfdg fbg gf bafeg dbefa fcge gcbea fcaegb dgceab fcbdga | gecf egdcabf bgf bfgea
+fgeab ca afcebg bdacfeg cfaedg gcfdb baec bfadeg bafgc acf | gebdcfa ecba ca fadegcb
+dbcfg fgd bdegcaf fgec aegbdf ecdfab fbedc dacgb gdcebf gf | cefg dcbef fcge gbcadfe
+bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd | ed bcgafe cdgba cbgef
+egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg | gbdfcae bgc cg cgb
+gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce"
+
+        [<Fact>]
+        let ``Parses input`` () =
+            output.WriteLine(
+                sprintf
+                    "%A"
+                    (largerExample.Split Environment.NewLine
+                     |> parseInput
+                     |> Seq.toArray)
+            )
+
+        [<Fact>]
+        let ``Gets easy digits`` () =
+            output.WriteLine(
+                largerExample.Split Environment.NewLine
+                |> parseInput
+                |> getEasyDigits
+                |> String.concat ","
+            )
+
+        [<Fact>]
+        let ``Counts number of times easy digits occur`` () =
+            Assert.Equal(
+                26,
+                largerExample.Split Environment.NewLine
+                |> parseInput
+                |> countEasyDigits
+            )
+
+        [<Fact>]
+        let ``Counts number of times easy digits occur with real data`` () =
+            let result =
+                File.ReadAllLines "data/day8input.txt"
+                |> parseInput
+                |> countEasyDigits
+
+            output.WriteLine(result.ToString())
