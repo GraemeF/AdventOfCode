@@ -1,6 +1,7 @@
 ﻿namespace AdventOfCode
 
 open System
+open System.Collections.Generic
 open System.IO
 open Xunit
 open Xunit.Abstractions
@@ -18,18 +19,16 @@ module Day8 =
         |> Seq.map (fun e -> e.Trim '|')
         |> Seq.filter (fun s -> not (String.IsNullOrWhiteSpace s))
 
-    let parseEntry (input: string array) : Entry =
-        let uniqueSignalPatterns = input.[0] |> parsePatterns
-        let outputValue = input.[1] |> parsePatterns
+    let parseEntry (input: string) : Entry =
+        let parts = input.Split '|'
+        let uniqueSignalPatterns = parts.[0] |> parsePatterns
+        let outputValue = parts.[1] |> parsePatterns
 
         { patterns = uniqueSignalPatterns |> Seq.toArray
           output = outputValue |> Seq.toArray }
 
     let parseInput (input: string seq) : Entry array =
-        input
-        |> Seq.map (fun s -> s.Split '|')
-        |> Seq.map parseEntry
-        |> Seq.toArray
+        input |> Seq.map parseEntry |> Seq.toArray
 
     let getEasyDigits (entries: Entry seq) =
         entries
@@ -39,7 +38,49 @@ module Day8 =
 
     let countEasyDigits (entries: Entry seq) = entries |> getEasyDigits |> Seq.length
 
+    let digitSegments =
+        dict [ (0, "abcefg")
+               (1, "cf")
+               (2, "acdeg")
+               (3, "acdfg")
+               (4, "bcdf")
+               (5, "abdfg")
+               (6, "abdefg")
+               (7, "acf")
+               (8, "abcdefg")
+               (9, "abcdfg") ]
+
+    let unshuffledDisplayMappings = "abcdefg"
+    let determineDisplayMappings patterns = "deafgbc"
+
+    let sortedPattern (s: char seq) : string = s |> Seq.sort |> String.Concat
+
+    let isMatch (a: char seq) (b: char seq) : bool =
+        (a |> sortedPattern) = (b |> sortedPattern)
+
+    let determineDigitMappings displayMappings =
+        digitSegments
+        |> Seq.map (fun mapping -> mapping) // TODO
+        |> Seq.fold (fun digitMappings mapping -> digitMappings |> Map.add mapping.Key mapping.Value) Map.empty
+
+    let matchDigit (mappings: IDictionary<int, string>) (pattern: string) : int =
+        mappings
+        |> Seq.find (fun x -> isMatch pattern x.Value)
+        |> fun x -> x.Key
+
+
+    let matchDigits output mappings : int seq = output |> Seq.map (matchDigit mappings)
+
+    let getOutputDigits (entry: Entry) : int seq =
+        entry.patterns
+        |> determineDisplayMappings
+        |> determineDigitMappings
+        |> matchDigits entry.output
+
     type Tests(output: ITestOutputHelper) =
+
+        let example =
+            "acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab | cdfeb fcadb cdfeb cdbaf"
 
         let largerExample =
             "be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb | fdgacbe cefdb cefbgd gcbe
@@ -80,6 +121,24 @@ gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
                 |> parseInput
                 |> countEasyDigits
             )
+
+        [<Fact>]
+        let ``Determines display mappings`` () =
+            let mappings =
+                example |> parseEntry |> determineDisplayMappings
+
+            Assert.Equal("deafgbc", mappings)
+
+        [<Fact>]
+        let ``Determines digit mappings`` () =
+            let mappings =
+                example |> parseEntry |> determineDigitMappings
+
+            Assert.True(isMatch "gcdfa" mappings.[2], mappings.[2])
+
+        [<Fact>]
+        let ``Determines output digits`` () =
+            Assert.Equal([ 5; 3; 5; 3 ], example |> parseEntry |> getOutputDigits)
 
         [<Fact>]
         let ``Counts number of times easy digits occur with real data`` () =
