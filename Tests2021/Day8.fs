@@ -2,6 +2,7 @@
 
 open System
 open System.Collections.Generic
+open System.Collections.Immutable
 open System.IO
 open Xunit
 open Xunit.Abstractions
@@ -49,6 +50,30 @@ module Day8 =
                (7, "acf")
                (8, "abcdefg")
                (9, "abcdfg") ]
+
+    let blankDisplay =
+        ImmutableArray.Create<bool>([| 1 .. 7 |] |> Array.map (fun _ -> false))
+
+    let stringToBitmap: Char seq -> ImmutableArray<bool> =
+        Seq.fold (fun result c -> result.SetItem(((int c) - (int 'a')), true)) blankDisplay
+
+    let toString (c: char) (s: char seq) : string = c :: (s |> Seq.toList) |> String.Concat
+
+    let rec findWiringCombinations (remainingSegments: char seq) : string seq =
+        remainingSegments
+        |> Seq.map
+            (fun (c: char) ->
+                let result =
+                    (remainingSegments
+                     |> (Seq.except [ c ])
+                     |> findWiringCombinations
+                     |> Seq.map (toString c))
+
+                if result |> Seq.isEmpty then
+                    [ $"{c}" ] |> List.toSeq
+                else
+                    result)
+        |> Seq.concat
 
     let unshuffledDisplayMappings = "abcdefg"
     let determineDisplayMappings patterns = "deafgbc"
@@ -121,6 +146,18 @@ gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
                 |> parseInput
                 |> countEasyDigits
             )
+
+        [<Fact>]
+        let ``Converts a string to a bitmap`` () =
+            let expected =
+                ImmutableArray.Create(true, false, true, false, false, true, false)
+
+            let actual = "acf" |> stringToBitmap
+            Helpers.Helpers.shouldBeEquivalentsTo expected actual
+
+        [<Fact>]
+        let ``Finds wiring combinations`` () =
+            Assert.Equal(6, "obc" |> findWiringCombinations |> Seq.length)
 
         [<Fact>]
         let ``Determines display mappings`` () =
