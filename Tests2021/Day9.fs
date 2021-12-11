@@ -21,26 +21,32 @@ let parseInput (input: seq<string>) : Height [,] =
 
     heightmap
 
-let getHeight (heightmap: Height [,]) y x : Height option =
+let isLocation (heightmap: Height [,]) y x : bool =
     let length1: int = heightmap |> Array2D.length1
     let length2: int = heightmap |> Array2D.length2
 
-    if x < 0 then None
-    elif x > length2 - 1 then None
-    elif y < 0 then None
-    elif y > length1 - 1 then None
-    else Some heightmap.[y, x]
+    if x < 0 then false
+    elif x > length2 - 1 then false
+    elif y < 0 then false
+    elif y > length1 - 1 then false
+    else true
+
+let getHeight (heightmap: Height [,]) y x : Height option =
+    if (isLocation heightmap y x) then
+        None
+    else
+        Some heightmap.[y, x]
+
+let getNeighbouringLocations (heightmap: Height [,]) (y: int) (x: int) : (int * int) seq =
+    [ ((y - 1), x)
+      ((y + 1), x)
+      (y, (x - 1))
+      (y, (x + 1)) ]
+    |> Seq.filter (fun (y, x) -> isLocation heightmap y x)
 
 let getNeighbouringHeights (heightmap: Height [,]) y x : Height seq =
-    let neighbouringHeights =
-        [ getHeight heightmap (y - 1) x
-          getHeight heightmap (y + 1) x
-          getHeight heightmap y (x - 1)
-          getHeight heightmap y (x + 1) ]
-
-    neighbouringHeights
-    |> Seq.filter (fun h -> h.IsSome)
-    |> Seq.map (fun h -> h.Value)
+    getNeighbouringLocations heightmap y x
+    |> Seq.map (fun (y, x) -> heightmap.[y, x])
 
 let isLowPoint (heightmap: Height [,]) y x =
     let height = heightmap.[y, x]
@@ -49,21 +55,33 @@ let isLowPoint (heightmap: Height [,]) y x =
     |> Seq.toList
     |> Seq.forall (fun h -> h > height)
 
-let findRowLowPoints (heightmap: Height [,]) y : Height seq =
+let findRowLowPointLocations (heightmap: Height [,]) y : (int * int) seq =
     [ 0 .. (heightmap |> Array2D.length2) - 1 ]
     |> Seq.filter (isLowPoint heightmap y)
-    |> Seq.map (fun x -> heightmap.[y, x])
+    |> Seq.map (fun x -> (y, x))
 
-let findLowPoints (heightmap: Height [,]) : Height seq =
+let findLowPointLocations (heightmap: Height [,]) : (int * int) seq =
     [ 0 .. (heightmap |> Array2D.length1) - 1 ]
-    |> Seq.map (findRowLowPoints heightmap)
+    |> Seq.map (findRowLowPointLocations heightmap)
     |> Seq.concat
+
+let findLowPointHeights (heightmap: Height [,]) : Height seq =
+    heightmap
+    |> findLowPointLocations
+    |> Seq.map (fun (y, x) -> heightmap.[y, x])
 
 let sumRiskLevels (heightmap: Height [,]) : int =
     heightmap
-    |> findLowPoints
+    |> findLowPointHeights
     |> Seq.map (fun height -> height + 1)
     |> Seq.sum
+
+let measureBasinSize (heightmap: Height [,]) (y, x) : int = 0
+
+let findBasinSizes (heightmap: Height [,]) : int seq =
+    heightmap
+    |> findLowPointLocations
+    |> Seq.map (measureBasinSize heightmap)
 
 type Tests(output: ITestOutputHelper) =
 
@@ -80,7 +98,7 @@ type Tests(output: ITestOutputHelper) =
             [ 0; 1; 5; 5 ],
             example.Split Environment.NewLine
             |> parseInput
-            |> findLowPoints
+            |> findLowPointHeights
             |> Seq.sort
         )
 
@@ -91,6 +109,17 @@ type Tests(output: ITestOutputHelper) =
             example.Split Environment.NewLine
             |> parseInput
             |> sumRiskLevels
+        )
+
+    [<Fact>]
+    let ``Finds basin sizes`` () =
+        Assert.Equal(
+            [ 14; 9; 9 ],
+            example.Split Environment.NewLine
+            |> parseInput
+            |> findBasinSizes
+            |> Seq.sortDescending
+            |> Seq.take 3
         )
 
     [<Fact>]
