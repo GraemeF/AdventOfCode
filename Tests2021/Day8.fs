@@ -57,6 +57,14 @@ module Day8 =
     let stringToBitmap: Char seq -> ImmutableArray<bool> =
         Seq.fold (fun result c -> result.SetItem(((int c) - (int 'a')), true)) blankDisplay
 
+    let unshuffledDisplayMappings = "abcdefg"
+
+    let bitmapToString (bitmap: ImmutableArray<bool>) (wiring: string) : string =
+        [ 0 .. wiring.Length - 1 ]
+        |> Seq.filter (fun i -> bitmap.[i])
+        |> Seq.map (fun i -> wiring.[i])
+        |> String.Concat
+
     let toString (c: char) (s: char seq) : string = c :: (s |> Seq.toList) |> String.Concat
 
     let rec findWiringCombinations (remainingSegments: char seq) : string seq =
@@ -75,13 +83,28 @@ module Day8 =
                     result)
         |> Seq.concat
 
-    let unshuffledDisplayMappings = "abcdefg"
-    let determineDisplayMappings patterns = "deafgbc"
-
     let sortedPattern (s: char seq) : string = s |> Seq.sort |> String.Concat
 
     let isMatch (a: char seq) (b: char seq) : bool =
         (a |> sortedPattern) = (b |> sortedPattern)
+
+    let patternsMatch patterns wiring =
+        let digitWirings =
+            digitSegments.Values
+            |> Seq.map stringToBitmap
+            |> Seq.map (fun x -> bitmapToString x wiring)
+
+        patterns
+        |> Seq.forall (fun pattern -> digitWirings |> Seq.exists (isMatch pattern))
+
+    let determineDisplayMappings patterns =
+        let wiringCombinations =
+            unshuffledDisplayMappings
+            |> findWiringCombinations
+
+        wiringCombinations
+        |> Seq.find (patternsMatch patterns)
+
 
     let determineDigitMappings displayMappings =
         digitSegments
@@ -162,7 +185,9 @@ gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
         [<Fact>]
         let ``Determines display mappings`` () =
             let mappings =
-                example |> parseEntry |> determineDisplayMappings
+                example
+                |> parseEntry
+                |> fun e -> determineDisplayMappings e.patterns
 
             Assert.Equal("deafgbc", mappings)
 
