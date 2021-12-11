@@ -88,11 +88,13 @@ module Day8 =
     let isMatch (a: char seq) (b: char seq) : bool =
         (a |> sortedPattern) = (b |> sortedPattern)
 
-    let patternsMatch patterns wiring =
+    let rewire x wiring =
+        bitmapToString (stringToBitmap x) wiring
+
+    let isValidWiring patterns wiring =
         let digitWirings =
             digitSegments.Values
-            |> Seq.map stringToBitmap
-            |> Seq.map (fun x -> bitmapToString x wiring)
+            |> Seq.map (fun x -> rewire x wiring)
 
         patterns
         |> Seq.forall (fun pattern -> digitWirings |> Seq.exists (isMatch pattern))
@@ -103,12 +105,14 @@ module Day8 =
             |> findWiringCombinations
 
         wiringCombinations
-        |> Seq.find (patternsMatch patterns)
+        |> Seq.find (isValidWiring patterns)
 
 
-    let determineDigitMappings displayMappings =
+    let determineDigitMappings patterns =
+        let wiring = patterns |> determineDisplayMappings
+
         digitSegments
-        |> Seq.map (fun mapping -> mapping) // TODO
+        |> Seq.map (fun mapping -> KeyValuePair(mapping.Key, rewire mapping.Value wiring))
         |> Seq.fold (fun digitMappings mapping -> digitMappings |> Map.add mapping.Key mapping.Value) Map.empty
 
     let matchDigit (mappings: IDictionary<int, string>) (pattern: string) : int =
@@ -121,9 +125,22 @@ module Day8 =
 
     let getOutputDigits (entry: Entry) : int seq =
         entry.patterns
-        |> determineDisplayMappings
         |> determineDigitMappings
         |> matchDigits entry.output
+
+
+    let getOutput (entry: Entry) : int =
+        let digits = entry |> getOutputDigits |> Seq.toList
+        let length = digits |> Seq.length
+
+        [ 1 .. length ]
+        |> Seq.sumBy
+            (fun index ->
+                digits.[index - 1]
+                * int (Math.Pow(double 10, double (length - index))))
+
+
+    let sumOutputs entries = entries |> Seq.map getOutput |> Seq.sum
 
     type Tests(output: ITestOutputHelper) =
 
@@ -194,7 +211,9 @@ gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
         [<Fact>]
         let ``Determines digit mappings`` () =
             let mappings =
-                example |> parseEntry |> determineDigitMappings
+                example
+                |> parseEntry
+                |> fun x -> determineDigitMappings x.patterns
 
             Assert.True(isMatch "gcdfa" mappings.[2], mappings.[2])
 
@@ -203,10 +222,41 @@ gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
             Assert.Equal([ 5; 3; 5; 3 ], example |> parseEntry |> getOutputDigits)
 
         [<Fact>]
+        let ``Determines output`` () =
+            Assert.Equal(5353, example |> parseEntry |> getOutput)
+
+        [<Fact>]
+        let ``Sums outputs`` () =
+            Assert.Equal(
+                61229,
+                largerExample.Split Environment.NewLine
+                |> parseInput
+                |> sumOutputs
+            )
+
+        [<Fact>]
         let ``Counts number of times easy digits occur with real data`` () =
             let result =
                 File.ReadAllLines "data/day8input.txt"
                 |> parseInput
                 |> countEasyDigits
+
+            output.WriteLine(result.ToString())
+
+        [<Fact>]
+        let ``Determines output digits with real data`` () =
+            let result =
+                File.ReadAllLines "data/day8input.txt"
+                |> parseInput
+                |> sumOutputs
+
+            output.WriteLine(result.ToString())
+
+        [<Fact>]
+        let ``Sums outputs with real data`` () =
+            let result =
+                File.ReadAllLines "data/day8input.txt"
+                |> parseInput
+                |> sumOutputs
 
             output.WriteLine(result.ToString())
