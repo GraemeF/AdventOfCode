@@ -76,12 +76,38 @@ let sumRiskLevels (heightmap: Height [,]) : int =
     |> Seq.map (fun height -> height + 1)
     |> Seq.sum
 
-let measureBasinSize (heightmap: Height [,]) (y, x) : int = 0
+let isInBasin (heightmap: Height [,]) (y, x) = heightmap.[y, x] < 9
+
+let rec getBasinLocations (heightmap: Height [,]) (basinLocations: (int * int) list) (lowY, lowX) : (int * int) list =
+    let newBasinLocations = (lowY, lowX) :: basinLocations
+
+    getNeighbouringLocations heightmap lowY lowX
+    |> Seq.except basinLocations
+    |> Seq.filter (isInBasin heightmap)
+    |> Seq.fold (getBasinLocations heightmap) newBasinLocations
+    |> Seq.distinct
+    |> Seq.toList
+
+let rec measureBasinSize (heightmap: Height [,]) (basinLocations: (int * int) list) lowPointLocation : int =
+    getBasinLocations heightmap [] lowPointLocation
+    |> Seq.length
 
 let findBasinSizes (heightmap: Height [,]) : int seq =
     heightmap
     |> findLowPointLocations
-    |> Seq.map (measureBasinSize heightmap)
+    |> Seq.map (measureBasinSize heightmap [])
+
+let findLargestBasinSizes qty (heightmap: Height [,]) : int seq =
+    heightmap
+    |> findLowPointLocations
+    |> Seq.map (measureBasinSize heightmap [])
+    |> Seq.sortDescending
+    |> Seq.take qty
+
+let multiplyLargestBasinSizes qty (heightmap: Height [,]) : int =
+    heightmap
+    |> findLargestBasinSizes qty
+    |> Seq.reduce (fun a b -> a * b)
 
 type Tests(output: ITestOutputHelper) =
 
@@ -117,9 +143,16 @@ type Tests(output: ITestOutputHelper) =
             [ 14; 9; 9 ],
             example.Split Environment.NewLine
             |> parseInput
-            |> findBasinSizes
-            |> Seq.sortDescending
-            |> Seq.take 3
+            |> findLargestBasinSizes 3
+        )
+
+    [<Fact>]
+    let ``Finds multiplied basin sizes`` () =
+        Assert.Equal(
+            1134,
+            example.Split Environment.NewLine
+            |> parseInput
+            |> multiplyLargestBasinSizes 3
         )
 
     [<Fact>]
@@ -128,5 +161,14 @@ type Tests(output: ITestOutputHelper) =
             File.ReadAllLines "data/day9input.txt"
             |> parseInput
             |> sumRiskLevels
+
+        output.WriteLine(result.ToString())
+
+    [<Fact>]
+    let ``Multiplies largest basin sizes with real data`` () =
+        let result =
+            File.ReadAllLines "data/day9input.txt"
+            |> parseInput
+            |> multiplyLargestBasinSizes 3
 
         output.WriteLine(result.ToString())
