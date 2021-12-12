@@ -10,21 +10,26 @@ open Xunit.Abstractions
 type Pair =
     { opener: char
       closer: char
-      score: int }
+      syntaxErrorScore: UInt64
+      autocompleteScore: UInt64 }
 
 let legalPairs: Pair list =
     [ { opener = '('
         closer = ')'
-        score = 3 }
+        syntaxErrorScore = 3UL
+        autocompleteScore = 1UL }
       { opener = '['
         closer = ']'
-        score = 57 }
+        syntaxErrorScore = 57UL
+        autocompleteScore = 2UL }
       { opener = '{'
         closer = '}'
-        score = 1197 }
+        syntaxErrorScore = 1197UL
+        autocompleteScore = 3UL }
       { opener = '<'
         closer = '>'
-        score = 25137 } ]
+        syntaxErrorScore = 25137UL
+        autocompleteScore = 4UL } ]
 
 let findOpener c =
     legalPairs |> Seq.tryFind (fun p -> p.opener = c)
@@ -49,16 +54,43 @@ let processCharacter (openChunks: ImmutableStack<Pair>, illegalCharacter: char o
             else
                 (openChunks, Some character)
 
-let findFirstIllegalCharacter line : char option =
+let processLine line =
     line
     |> Seq.fold processCharacter (ImmutableStack<Pair>.Empty, None)
-    |> snd
 
-let totalScores (lines: string seq) : int =
+let findFirstIllegalCharacter line : char option = line |> processLine |> snd
+
+let totalSyntaxErrorScores (lines: string seq) : UInt64 =
     lines
     |> Seq.map findFirstIllegalCharacter
     |> Seq.filter (fun x -> x.IsSome)
-    |> Seq.sumBy (fun x -> (findCloser x.Value).Value.score)
+    |> Seq.sumBy (fun x -> (findCloser x.Value).Value.syntaxErrorScore)
+
+let findIncompleteLineOpenChunks (lines: string seq) : ImmutableStack<Pair> seq =
+    lines
+    |> Seq.map processLine
+    |> Seq.filter (fun x -> (snd x).IsNone)
+    |> Seq.map fst
+    |> Seq.filter (fun x -> not (Seq.isEmpty x))
+
+let findAutocompleteScore =
+    Seq.fold (fun total openChunk -> (total * 5UL) + openChunk.autocompleteScore) 0UL
+
+let findAutocompleteScores (lines: string seq) : UInt64 seq =
+    lines
+    |> findIncompleteLineOpenChunks
+    |> Seq.map findAutocompleteScore
+
+let findMiddleAutocompleteScore (lines: string seq) : UInt64 =
+    let scores =
+        lines
+        |> findAutocompleteScores
+        |> Seq.sort
+        |> Seq.toList
+
+    ((scores |> Seq.length) % 2) |> should equal 1
+
+    scores.[(scores |> Seq.length) / 2]
 
 type Tests(output: ITestOutputHelper) =
 
@@ -106,13 +138,52 @@ type Tests(output: ITestOutputHelper) =
         |> should equal (List.init exampleCorruptedChunks.Length (fun _ -> true))
 
     [<Fact>]
-    let ``Totals scores`` () =
+    let ``Totals syntax error scores`` () =
         example.Split Environment.NewLine
-        |> totalScores
-        |> should equal 26397
+        |> totalSyntaxErrorScores
+        |> should equal 26397UL
 
     [<Fact>]
-    let ``Totals scores with real data`` () =
+    let ``Finds autocomplete scores`` () =
+        example.Split Environment.NewLine
+        |> findAutocompleteScores
+        |> Seq.toList
+        |> should
+            equal
+            [ 288957UL
+              5566UL
+              1480781UL
+              995444UL
+              294UL ]
+
+    [<Fact>]
+    let ``Find middle autocomplete score`` () =
+        example.Split Environment.NewLine
+        |> findMiddleAutocompleteScore
+        |> should equal 288957UL
+
+    [<Fact>]
+    let ``Totals syntax error scores with real data`` () =
         File.ReadAllLines "data/day10input.txt"
-        |> totalScores
+        |> totalSyntaxErrorScores
         |> fun x -> output.WriteLine(x.ToString())
+
+    [<Fact>]
+    let ``Finds autocomplete scores with real data`` () =
+        File.ReadAllLines "data/day10input.txt"
+        |> findAutocompleteScores
+        |> Seq.map (fun x -> x.ToString())
+        |> (fun x -> String.Join(", ", x))
+        |> fun x -> output.WriteLine(x.ToString())
+
+    [<Fact>]
+    let ``Finds middle autocomplete score with real data`` () =
+        let score =
+            File.ReadAllLines "data/day10input.txt"
+            |> Seq.map (fun s -> s.Trim())
+            |> findMiddleAutocompleteScore
+
+        score |> should be (greaterThan 228508708UL)
+        score |> fun x -> output.WriteLine(x.ToString())
+
+// 228508708 is too low
