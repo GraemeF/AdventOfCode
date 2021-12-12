@@ -1,6 +1,8 @@
 ﻿module Tests2021.Day10
 
+open System
 open System.Collections.Immutable
+open System.IO
 open FsUnit
 open Xunit
 open Xunit.Abstractions
@@ -24,11 +26,11 @@ let legalPairs: Pair list =
         closer = '>'
         score = 25137 } ]
 
-let isOpener c =
-    legalPairs |> Seq.exists (fun p -> p.opener = c)
-
 let findOpener c =
     legalPairs |> Seq.tryFind (fun p -> p.opener = c)
+
+let findCloser c =
+    legalPairs |> Seq.tryFind (fun p -> p.closer = c)
 
 
 let processCharacter (openChunks: ImmutableStack<Pair>, illegalCharacter: char option) (character: char) =
@@ -51,6 +53,12 @@ let findFirstIllegalCharacter line : char option =
     line
     |> Seq.fold processCharacter (ImmutableStack<Pair>.Empty, None)
     |> snd
+
+let totalScores (lines: string seq) : int =
+    lines
+    |> Seq.map findFirstIllegalCharacter
+    |> Seq.filter (fun x -> x.IsSome)
+    |> Seq.sumBy (fun x -> (findCloser x.Value).Value.score)
 
 type Tests(output: ITestOutputHelper) =
 
@@ -96,3 +104,15 @@ type Tests(output: ITestOutputHelper) =
         |> Seq.toList
         |> List.map (fun (x: char option) -> x.IsSome)
         |> should equal (List.init exampleCorruptedChunks.Length (fun _ -> true))
+
+    [<Fact>]
+    let ``Totals scores`` () =
+        example.Split Environment.NewLine
+        |> totalScores
+        |> should equal 26397
+
+    [<Fact>]
+    let ``Totals scores with real data`` () =
+        File.ReadAllLines "data/day10input.txt"
+        |> totalScores
+        |> fun x -> output.WriteLine(x.ToString())
