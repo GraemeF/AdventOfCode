@@ -19,6 +19,7 @@
         <Compile Include="Day7.fs" />
         <Compile Include="Day8.fs" />
         <Compile Include="Day9.fs" />
+        <Compile Include="Day10.fs" />
         <Compile Include="Program.fs" />
         <Content Include="data\day1input.txt">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -51,6 +52,7 @@
 
     <ItemGroup>
         <PackageReference Include="FluentAssertions" Version="6.2.0" />
+        <PackageReference Include="FsUnit.xUnit" Version="4.1.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
         <PackageReference Include="xunit" Version="2.4.1" />
         <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
