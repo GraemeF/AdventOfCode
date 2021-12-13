@@ -5,7 +5,98 @@ open FsUnit
 open Xunit
 open Xunit.Abstractions
 
-let countFlashes _ = 0
+type EnergyLevel = byte
+
+let parseEnergyLevelMapRow (input: string) = input |> Seq.map Convert.ToByte
+
+let parseInput (input: seq<string>) : EnergyLevel [,] =
+    let energyLevelMap: EnergyLevel [,] =
+        Array2D.init (input |> Seq.length) (input |> Seq.head |> Seq.length) (fun _ _ -> 0uy)
+
+    input
+    |> Seq.iteri
+        (fun y line ->
+            parseEnergyLevelMapRow line
+            |> (Seq.iteri (fun x c -> Array2D.set energyLevelMap y x ((byte c) - byte '0'))))
+
+    energyLevelMap
+
+let isLocation (energyLevelMap: EnergyLevel [,]) y x : bool =
+    let length1: int = energyLevelMap |> Array2D.length1
+    let length2: int = energyLevelMap |> Array2D.length2
+
+    if x < 0 then false
+    elif x > length2 - 1 then false
+    elif y < 0 then false
+    elif y > length1 - 1 then false
+    else true
+
+let getEnergyLevel (energyLevelMap: EnergyLevel [,]) y x : EnergyLevel option =
+    if (isLocation energyLevelMap y x) then
+        Some energyLevelMap.[y, x]
+    else
+        None
+
+let setEnergyLevel (energyLevelMap: EnergyLevel [,]) (y: int) (x: int) (energyLevel: EnergyLevel) : EnergyLevel [,] =
+    energyLevelMap
+    |> fun a -> Array2D.set a y x energyLevel
+
+    energyLevelMap
+
+let getNeighbouringLocations (energyLevelMap: EnergyLevel [,]) (y: int) (x: int) : (int * int) seq =
+    [ ((y - 1), x)
+      ((y + 1), x)
+      (y, (x - 1))
+      (y, (x + 1))
+      ((y - 1), (x - 1))
+      ((y + 1), (x + 1))
+      ((y + 1), (x - 1))
+      ((y - 1), (x + 1)) ]
+    |> Seq.filter (fun (y, x) -> isLocation energyLevelMap y x)
+
+let getNeighbouringEnergyLevels (energyLevelMap: EnergyLevel [,]) y x : EnergyLevel seq =
+    getNeighbouringLocations energyLevelMap y x
+    |> Seq.map (fun (y, x) -> energyLevelMap.[y, x])
+
+let getRowLocations (energyLevelMap: EnergyLevel [,]) y : (int * int) seq =
+    [ 0 .. (energyLevelMap |> Array2D.length2) - 1 ]
+    |> Seq.map (fun x -> (y, x))
+
+let getAllLocations (energyLevelMap: EnergyLevel [,]) : (int * int) seq =
+    [ 0 .. (energyLevelMap |> Array2D.length1) - 1 ]
+    |> Seq.map (getRowLocations energyLevelMap)
+    |> Seq.concat
+
+let increase (map: EnergyLevel [,]) ((y, x): int * int) : uint * EnergyLevel [,] =
+    let initialEnergyLevel = getEnergyLevel map y x
+
+    if initialEnergyLevel.IsNone then
+        (0u, map)
+    else
+        let newEnergyLevel = initialEnergyLevel.Value + 1uy
+
+        if newEnergyLevel > 9uy then
+            (1u, setEnergyLevel map y x 0uy)
+        else
+            (0u, setEnergyLevel map y x newEnergyLevel)
+
+let step (map: EnergyLevel [,]) : uint * EnergyLevel [,] =
+    map
+    |> getAllLocations
+    |> Seq.fold
+        (fun (flashCount, map) location ->
+            let additionalFlashes, updatedMap = increase map location
+            (flashCount + additionalFlashes, updatedMap))
+        (0u, map)
+
+let countFlashes steps map =
+    [ 1 .. steps ]
+    |> Seq.fold
+        (fun (totalFlashes, map) _ ->
+            let newFlashes, newMap = step map
+            (newFlashes + totalFlashes, newMap))
+        (0u, map)
+    |> fst
 
 type Tests(output: ITestOutputHelper) =
 
@@ -24,5 +115,6 @@ type Tests(output: ITestOutputHelper) =
     [<Fact>]
     let ``Counts flashes`` () =
         example.Split Environment.NewLine
-        |> countFlashes
-        |> should equal 1656
+        |> parseInput
+        |> countFlashes 100
+        |> should equal 1656u
