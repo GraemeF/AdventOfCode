@@ -67,7 +67,7 @@ let getAllLocations (energyLevelMap: EnergyLevel [,]) : (int * int) seq =
     |> Seq.map (getRowLocations energyLevelMap)
     |> Seq.concat
 
-let increase (map: EnergyLevel [,]) ((y, x): int * int) : uint * EnergyLevel [,] =
+let rec increase (map: EnergyLevel [,]) ((y, x): int * int) : uint * EnergyLevel [,] =
     let initialEnergyLevel = getEnergyLevel map y x
 
     if initialEnergyLevel.IsNone then
@@ -76,7 +76,15 @@ let increase (map: EnergyLevel [,]) ((y, x): int * int) : uint * EnergyLevel [,]
         let newEnergyLevel = initialEnergyLevel.Value + 1uy
 
         if newEnergyLevel > 9uy then
-            (1u, setEnergyLevel map y x 0uy)
+            let cascadingFlashes, map =
+                (getNeighbouringLocations map y x)
+                |> Seq.fold
+                    (fun (count, m) (y, x) ->
+                        let newFlashes, newMap = increase m (y, x)
+                        (count + newFlashes, newMap))
+                    (0u, map)
+
+            (1u + cascadingFlashes, setEnergyLevel map y x 0uy)
         else
             (0u, setEnergyLevel map y x newEnergyLevel)
 
