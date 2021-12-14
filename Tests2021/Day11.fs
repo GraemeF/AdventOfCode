@@ -82,9 +82,9 @@ let rec increase (map: EnergyLevel [,]) ((y, x): int * int) : uint * EnergyLevel
                     (fun (count, m) (y, x) ->
                         let newFlashes, newMap = increase m (y, x)
                         (count + newFlashes, newMap))
-                    (0u, map)
+                    (0u, setEnergyLevel map y x 0uy)
 
-            (1u + cascadingFlashes, setEnergyLevel map y x 0uy)
+            (1u + cascadingFlashes, map)
         else
             (0u, setEnergyLevel map y x newEnergyLevel)
 
