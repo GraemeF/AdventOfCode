@@ -44,14 +44,14 @@ let setEnergyLevel (energyLevelMap: EnergyLevel [,]) (y: int) (x: int) (energyLe
     energyLevelMap
 
 let getNeighbouringLocations (energyLevelMap: EnergyLevel [,]) (y: int) (x: int) : (int * int) seq =
-    [ ((y - 1), x)
-      ((y + 1), x)
-      (y, (x - 1))
-      (y, (x + 1))
-      ((y - 1), (x - 1))
-      ((y + 1), (x + 1))
+    [ ((y + 1), (x + 1))
       ((y + 1), (x - 1))
-      ((y - 1), (x + 1)) ]
+      ((y + 1), x)
+      ((y - 1), (x + 1))
+      ((y - 1), (x - 1))
+      ((y - 1), x)
+      (y, (x + 1))
+      (y, (x - 1)) ]
     |> Seq.filter (fun (y, x) -> isLocation energyLevelMap y x)
 
 let getNeighbouringEnergyLevels (energyLevelMap: EnergyLevel [,]) y x : EnergyLevel seq =
@@ -67,11 +67,11 @@ let getAllLocations (energyLevelMap: EnergyLevel [,]) : (int * int) seq =
     |> Seq.map (getRowLocations energyLevelMap)
     |> Seq.concat
 
-let rec increase (map: EnergyLevel [,]) ((y, x): int * int) : uint * EnergyLevel [,] =
+let rec increase (map: EnergyLevel [,]) ((y, x): int * int) : (int * int) list * EnergyLevel [,] =
     let initialEnergyLevel = getEnergyLevel map y x
 
     if initialEnergyLevel.IsNone then
-        (0u, map)
+        ([], map)
     else
         let newEnergyLevel = initialEnergyLevel.Value + 1uy
 
@@ -79,31 +79,37 @@ let rec increase (map: EnergyLevel [,]) ((y, x): int * int) : uint * EnergyLevel
             let cascadingFlashes, map =
                 (getNeighbouringLocations map y x)
                 |> Seq.fold
-                    (fun (count, m) (y, x) ->
+                    (fun (flashes, m) (y, x) ->
                         let newFlashes, newMap = increase m (y, x)
-                        (count + newFlashes, newMap))
-                    (0u, setEnergyLevel map y x 0uy)
+                        (([ newFlashes; flashes ] |> List.concat), newMap))
+                    ([], setEnergyLevel map y x 0uy)
 
-            (1u + cascadingFlashes, map)
+            ((y, x) :: cascadingFlashes, map)
         else
-            (0u, setEnergyLevel map y x newEnergyLevel)
+            ([], setEnergyLevel map y x newEnergyLevel)
 
-let step (map: EnergyLevel [,]) : uint * EnergyLevel [,] =
+let step (map: EnergyLevel [,]) : (int * int) list * EnergyLevel [,] =
     map
     |> getAllLocations
     |> Seq.fold
-        (fun (flashCount, map) location ->
+        (fun (flashes, map) location ->
             let additionalFlashes, updatedMap = increase map location
-            (flashCount + additionalFlashes, updatedMap))
-        (0u, map)
+
+            ([ flashes; additionalFlashes ]
+             |> List.concat
+             |> List.distinct,
+             updatedMap))
+        ([], map)
 
 let countFlashes steps map =
     [ 1 .. steps ]
     |> Seq.fold
         (fun (totalFlashes, map) _ ->
             let newFlashes, newMap = step map
-            (newFlashes + totalFlashes, newMap))
-        (0u, map)
+
+            let distinctFlashes = newFlashes |> List.distinct
+            ((distinctFlashes |> List.length) + totalFlashes, newMap))
+        (0, map)
     |> fst
 
 type Tests(output: ITestOutputHelper) =
