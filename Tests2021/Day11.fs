@@ -67,49 +67,50 @@ let getAllLocations (energyLevelMap: EnergyLevel [,]) : (int * int) seq =
     |> Seq.map (getRowLocations energyLevelMap)
     |> Seq.concat
 
-let rec increase (map: EnergyLevel [,]) ((y, x): int * int) : (int * int) list * EnergyLevel [,] =
+let rec increase (map: EnergyLevel [,]) ((y, x): int * int) : EnergyLevel [,] =
     let initialEnergyLevel = getEnergyLevel map y x
 
     if initialEnergyLevel.IsNone then
-        ([], map)
+        map
     else
         let newEnergyLevel = initialEnergyLevel.Value + 1uy
+        let increasedMap = setEnergyLevel map y x newEnergyLevel
 
-        if newEnergyLevel > 9uy then
-            let cascadingFlashes, map =
-                (getNeighbouringLocations map y x)
-                |> Seq.fold
-                    (fun (flashes, m) (y, x) ->
-                        let newFlashes, newMap = increase m (y, x)
-                        (([ newFlashes; flashes ] |> List.concat), newMap))
-                    ([], setEnergyLevel map y x 0uy)
-
-            ((y, x) :: cascadingFlashes, map)
+        if newEnergyLevel = 10uy then
+            (getNeighbouringLocations map y x)
+            |> Seq.fold increase increasedMap
         else
-            ([], setEnergyLevel map y x newEnergyLevel)
+            increasedMap
 
-let step (map: EnergyLevel [,]) : (int * int) list * EnergyLevel [,] =
-    map
+let reset (map: EnergyLevel [,]) ((y, x): int * int) : EnergyLevel [,] * bool =
+    let energyLevel = getEnergyLevel map y x
+
+    if energyLevel.IsNone then
+        (map, false)
+    else if energyLevel.Value > 9uy then
+        ((setEnergyLevel map y x 0uy), true)
+    else
+        (map, false)
+
+let step (map: EnergyLevel [,]) : uint * EnergyLevel [,] =
+    let increasedMap =
+        map |> getAllLocations |> Seq.fold increase map
+
+    increasedMap
     |> getAllLocations
     |> Seq.fold
-        (fun (flashes, map) location ->
-            let additionalFlashes, updatedMap = increase map location
-
-            ([ flashes; additionalFlashes ]
-             |> List.concat
-             |> List.distinct,
-             updatedMap))
-        ([], map)
+        (fun (flashCount, updatedMap) location ->
+            let flashedMap, didFlash = reset updatedMap location
+            ((flashCount + if didFlash then 1u else 0u), flashedMap))
+        (0u, increasedMap)
 
 let countFlashes steps map =
     [ 1 .. steps ]
     |> Seq.fold
         (fun (totalFlashes, map) _ ->
             let newFlashes, newMap = step map
-
-            let distinctFlashes = newFlashes |> List.distinct
-            ((distinctFlashes |> List.length) + totalFlashes, newMap))
-        (0, map)
+            (newFlashes + totalFlashes, newMap))
+        (0u, map)
     |> fst
 
 type Tests(output: ITestOutputHelper) =
