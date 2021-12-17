@@ -1,6 +1,7 @@
 ﻿module Tests2021.Day11
 
 open System
+open System.IO
 open FsUnit
 open Xunit
 open Xunit.Abstractions
@@ -113,6 +114,11 @@ let countFlashes steps map =
         (0u, map)
     |> fst
 
+let findFirstStepWhereAllFlash map =
+    Seq.initInfinite (fun x -> x + 2)
+    |> Seq.takeWhile (fun stepNumber -> (step map) |> fst < uint (map.GetLength(0) * map.GetLength(1)))
+    |> Seq.last
+
 type Tests(output: ITestOutputHelper) =
 
     let example =
@@ -133,3 +139,30 @@ type Tests(output: ITestOutputHelper) =
         |> parseInput
         |> countFlashes 100
         |> should equal 1656u
+
+
+    [<Fact>]
+    let ``Finds synchronised flash`` () =
+        example.Split Environment.NewLine
+        |> parseInput
+        |> findFirstStepWhereAllFlash
+        |> should equal 195
+
+    [<Fact>]
+    let ``Counts flashes with real data`` () =
+        let flashes =
+            File.ReadAllLines "data/day11input.txt"
+            |> parseInput
+            |> countFlashes 100
+
+        flashes |> fun x -> output.WriteLine(x.ToString())
+
+    [<Fact>]
+    let ``Finds synchronised flash with real data`` () =
+        let stepNumber =
+            File.ReadAllLines "data/day11input.txt"
+            |> parseInput
+            |> findFirstStepWhereAllFlash
+
+        stepNumber
+        |> fun x -> output.WriteLine(x.ToString())
