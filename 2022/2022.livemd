@@ -181,13 +181,17 @@ defmodule Day2Part1 do
     }[shape]
   end
 
-  def get_result({x, x}), do: 3
-  def get_result({:rock, :scissors}), do: 0
-  def get_result({:rock, :paper}), do: 6
-  def get_result({:paper, :rock}), do: 0
-  def get_result({:paper, :scissors}), do: 6
-  def get_result({:scissors, :paper}), do: 0
-  def get_result({:scissors, :rock}), do: 6
+  @loss 0
+  @draw 3
+  @win 6
+
+  def get_result({x, x}), do: @draw
+  def get_result({:rock, :scissors}), do: @loss
+  def get_result({:rock, :paper}), do: @win
+  def get_result({:paper, :rock}), do: @loss
+  def get_result({:paper, :scissors}), do: @win
+  def get_result({:scissors, :paper}), do: @loss
+  def get_result({:scissors, :rock}), do: @win
 
   def get_round_score(plays) do
     get_result(plays) + (plays |> elem(1) |> get_shape_score)
