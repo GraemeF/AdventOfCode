@@ -2,6 +2,7 @@
 
 ```elixir
 Mix.install(kino: "~> 0.7.0")
+ExUnit.start()
 ```
 
 ## Day 1: Calorie Counting
@@ -60,10 +61,7 @@ defmodule Day1Part1 do
   def count_elf_calories(elf) do
     elf
     |> String.split("\n")
-    |> Enum.map(fn str ->
-      {calories, _} = Integer.parse(str)
-      calories
-    end)
+    |> Enum.map(&String.to_integer/1)
     |> Enum.sum()
   end
 
@@ -162,16 +160,12 @@ In this example, if you were to follow the strategy guide, you would get a total
 
 ```elixir
 defmodule Day2Part1 do
-  def get_shape(char) do
-    %{
-      "A" => :rock,
-      "B" => :paper,
-      "C" => :scissors,
-      "X" => :rock,
-      "Y" => :paper,
-      "Z" => :scissors
-    }[char]
-  end
+  def get_shape("A"), do: :rock
+  def get_shape("B"), do: :paper
+  def get_shape("C"), do: :scissors
+  def get_shape("X"), do: :rock
+  def get_shape("Y"), do: :paper
+  def get_shape("Z"), do: :scissors
 
   def get_shape_score(shape) do
     %{
@@ -186,15 +180,15 @@ defmodule Day2Part1 do
   @win 6
 
   def get_result({x, x}), do: @draw
-  def get_result({:rock, :scissors}), do: @loss
   def get_result({:rock, :paper}), do: @win
-  def get_result({:paper, :rock}), do: @loss
   def get_result({:paper, :scissors}), do: @win
-  def get_result({:scissors, :paper}), do: @loss
   def get_result({:scissors, :rock}), do: @win
+  def get_result({_, _}), do: @loss
+
+  def get_player_score({_, player}), do: player |> get_shape_score
 
   def get_round_score(plays) do
-    get_result(plays) + (plays |> elem(1) |> get_shape_score)
+    get_result(plays) + get_player_score(plays)
   end
 
   def calculate(input) do
@@ -249,13 +243,9 @@ defmodule Day2Part2 do
   def get_response(:lose, :scissors), do: :paper
   def get_response(:draw, x), do: x
 
-  def get_desired_outcome(char) do
-    %{
-      "X" => :lose,
-      "Y" => :draw,
-      "Z" => :win
-    }[char]
-  end
+  def get_desired_outcome("X"), do: :lose
+  def get_desired_outcome("Y"), do: :draw
+  def get_desired_outcome("Z"), do: :win
 
   def get_shapes({opponent, desired_outcome}) do
     opponent_shape = opponent |> Day2Part1.get_shape()
@@ -263,16 +253,18 @@ defmodule Day2Part2 do
     {opponent_shape, desired_outcome |> get_desired_outcome |> get_response(opponent_shape)}
   end
 
+  def get_round_score(round) do
+    round
+    |> String.split(" ")
+    |> List.to_tuple()
+    |> get_shapes
+    |> Day2Part1.get_round_score()
+  end
+
   def calculate(input) do
     input
     |> String.split("\n", trim: true)
-    |> Enum.map(fn round ->
-      round
-      |> String.split(" ")
-      |> List.to_tuple()
-      |> get_shapes
-      |> Day2Part1.get_round_score()
-    end)
+    |> Enum.map(&get_round_score/1)
     |> Enum.sum()
   end
 end
