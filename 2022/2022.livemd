@@ -5,6 +5,12 @@ Mix.install(kino: "~> 0.7.0")
 ExUnit.start()
 ```
 
+## Intro
+
+This is an attempt at using Elixir to solve the puzzles in [Advent of Code 2022](https://adventofcode.com/2022). To run the solutions, open with [Livebook](https://livebook.dev/).
+
+<!-- livebook:{"branch_parent_index":0} -->
+
 ## Day 1: Calorie Counting
 
 Santa's reindeer typically eat regular reindeer food, but they need a lot of magical energy to deliver presents on Christmas. For that, their favorite snack is a special type of star fruit that only grows deep in the jungle. The Elves have brought you on their annual expedition to the grove where the fruit grows.
@@ -126,6 +132,8 @@ end
 ```elixir
 input |> Kino.Input.read() |> Day1Part2.calculate()
 ```
+
+<!-- livebook:{"branch_parent_index":0} -->
 
 ## Day 2: Rock Paper Scissors
 
@@ -283,6 +291,8 @@ Following the Elf's instructions for the second column, what would your total sc
 ```elixir
 input |> Kino.Input.read() |> Day2Part2.calculate()
 ```
+
+<!-- livebook:{"branch_parent_index":0} -->
 
 ## Day 3: Rucksack Reorganization
 
