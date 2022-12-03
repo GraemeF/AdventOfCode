@@ -319,10 +319,57 @@ Uppercase item types `A` through `Z` have priorities 27 through 52.
 In the above example, the priority of the item type that appears in both compartments of each rucksack is 16 (`p`), 38 (`L`), 42 (`P`), 22 (`v`), 20 (`t`), and 19 (`s`); the sum of these is *157*.
 
 ```elixir
+defmodule Day3Part1 do
+  def split_rucksacks(rucksacks), do: rucksacks |> String.split("\n")
+
+  def split_compartments(rucksack),
+    do: rucksack |> String.split_at(rucksack |> String.length() |> div(2))
+
+  def item_types(contents), do: contents |> String.graphemes() |> MapSet.new()
+
+  def find_items_in_both_compartments({first, second}),
+    do:
+      first
+      |> item_types
+      |> MapSet.intersection(second |> item_types)
+
+  def priority(item) when item > "Z", do: (item |> String.to_charlist() |> hd) - 96
+  def priority(item), do: (item |> String.to_charlist() |> hd) - 38
+
+  def calculate(input),
+    do:
+      input
+      |> split_rucksacks
+      |> Enum.map(&split_compartments/1)
+      |> Enum.map(&find_items_in_both_compartments/1)
+      |> Enum.map(&MapSet.to_list/1)
+      |> List.flatten()
+      |> Enum.map(&priority/1)
+      |> Enum.sum()
+end
+```
+
+```elixir
 defmodule ExampleTest do
   use ExUnit.Case
+  import Day3Part1
 
-  assert example |> Day3Part1.calculate() == 157
+  assert example |> split_rucksacks() |> hd |> split_compartments() ==
+           {"vJrwpWtwJgWr", "hcsFMMfFFhFp"}
+
+  assert example
+         |> split_rucksacks()
+         |> hd
+         |> split_compartments()
+         |> find_items_in_both_compartments() ==
+           MapSet.new(["p"])
+
+  assert priority("a") === 1
+  assert priority("z") === 26
+  assert priority("A") === 27
+  assert priority("Z") === 52
+
+  assert example |> calculate() == 157
 end
 ```
 
