@@ -516,20 +516,25 @@ Some of the pairs have noticed that one of their assignments fully contains the 
 
 ```elixir
 defmodule Day4Part1 do
-  def contains?([{a, b}, {c, d}]), do: a >= c and b <= d
+  def contains?({a, b}, {c, d}), do: a >= c and b <= d
 
-  def either_contains?([first, second]),
-    do: contains?([first, second]) or contains?([second, first])
+  def contains?([first, second]),
+    do: contains?(first, second) or contains?(second, first)
 
   def parse_range(range),
     do: range |> String.split("-") |> Enum.map(&String.to_integer/1) |> List.to_tuple()
 
+  def parse_pairs(input),
+    do:
+      input
+      |> String.split()
+      |> Enum.map(fn pair -> pair |> String.split(",") end)
+      |> Enum.map(fn range -> range |> Enum.map(&parse_range/1) end)
+
   def calculate(input) do
     input
-    |> String.split()
-    |> Enum.map(fn pair -> pair |> String.split(",") end)
-    |> Enum.map(fn range -> range |> Enum.map(&parse_range/1) end)
-    |> Enum.filter(&either_contains?/1)
+    |> parse_pairs
+    |> Enum.filter(&contains?/1)
     |> Enum.count()
   end
 end
@@ -552,4 +557,53 @@ input = Kino.Input.textarea("Paste your puzzle input:")
 
 ```elixir
 input |> Kino.Input.read() |> Day4Part1.calculate()
+```
+
+### Part Two
+
+<!-- livebook:{"break_markdown":true} -->
+
+It seems like there is still quite a bit of duplicate work planned. Instead, the Elves would like to know the number of pairs that overlap at all.
+
+In the above example, the first two pairs (2-4,6-8 and 2-3,4-5) don't overlap, while the remaining four pairs (5-7,7-9, 2-8,3-7, 6-6,4-6, and 2-6,4-8) do overlap:
+
+* 5-7,7-9 overlaps in a single section, 7.
+* 2-8,3-7 overlaps all of the sections 3 through 7.
+* 6-6,4-6 overlaps in a single section, 6.
+* 2-6,4-8 overlaps in sections 4, 5, and 6.
+
+So, in this example, the number of overlapping assignment pairs is 4.
+
+```elixir
+defmodule Day4Part2 do
+  import Day4Part1
+
+  def overlaps?({a, _}, {c, d}) when a >= c and a <= d, do: true
+  def overlaps?({_, b}, {c, d}) when b >= c and b <= d, do: true
+  def overlaps?({_, _}, {_, _}), do: false
+
+  def overlaps?([a, b]), do: overlaps?(a, b) or overlaps?(b, a)
+
+  def calculate(input) do
+    input
+    |> parse_pairs
+    |> Enum.filter(&overlaps?/1)
+    |> Enum.count()
+  end
+end
+```
+
+```elixir
+defmodule ExampleTest do
+  use ExUnit.Case
+  import Day4Part2
+
+  assert example |> calculate == 4
+end
+```
+
+In how many assignment pairs do the ranges overlap?
+
+```elixir
+input |> Kino.Input.read() |> Day4Part2.calculate()
 ```
