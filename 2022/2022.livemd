@@ -578,10 +578,8 @@ So, in this example, the number of overlapping assignment pairs is 4.
 defmodule Day4Part2 do
   import Day4Part1
 
-  def overlaps?({a, _}, {c, d}) when a >= c and a <= d, do: true
-  def overlaps?({_, b}, {c, d}) when b >= c and b <= d, do: true
-  def overlaps?({_, _}, {_, _}), do: false
-
+  def within?(a, {c, d}), do: a >= c and a <= d
+  def overlaps?({a, b}, c), do: within?(a, c) or within?(b, c)
   def overlaps?([a, b]), do: overlaps?(a, b) or overlaps?(b, a)
 
   def calculate(input) do
