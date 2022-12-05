@@ -677,7 +677,27 @@ The Elves just need to know which crate will end up on top of each stack; in thi
 
 ```elixir
 defmodule Day5Part1 do
+  def split_row(""), do: []
+
+  def split_row(input) do
+    {first, rest} = input |> String.split_at(4)
+    [first] ++ split_row(rest)
+  end
+
+  def parse_cell(""), do: nil
+  def parse_cell("[" <> <<crate::bytes-size(1)>> <> "]"), do: crate
+  def parse_cell(stack_label), do: stack_label
+
+  def parse_row(input) do
+    input
+    |> split_row
+    |> Enum.map(&String.trim/1)
+    |> Enum.map(&parse_cell/1)
+  end
+
   def parse_stacks(input) do
+    [stacks_input, steps_input] = input |> String.split("\n\n")
+    stacks_input |> String.split("\n") |> Enum.map(&parse_row/1)
   end
 
   def calculate(input), do: "CMZ"
@@ -691,7 +711,7 @@ defmodule ExampleTest do
   use ExUnit.Case
   import Day5Part1
 
-  assert example |> parse_stacks |> Map.get(1) == ["N", "Z"]
+  assert example |> parse_stacks == %{1 => ["N", "Z"], 2 => ["M", "C", "D"], 3 => ["P"]}
 
   assert example |> calculate == "CMZ"
 end
