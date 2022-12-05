@@ -695,9 +695,21 @@ defmodule Day5Part1 do
     |> Enum.map(&parse_cell/1)
   end
 
+  def get_stack(input) do
+    [label | crates] = input |> Tuple.to_list() |> Enum.filter(fn x -> x != nil end)
+    %{label => crates |> Enum.reverse()}
+  end
+
   def parse_stacks(input) do
     [stacks_input, steps_input] = input |> String.split("\n\n")
-    stacks_input |> String.split("\n") |> Enum.map(&parse_row/1)
+
+    stacks_input
+    |> String.split("\n")
+    |> Enum.map(&parse_row/1)
+    |> Enum.reverse()
+    |> Enum.zip()
+    |> Enum.map(&get_stack/1)
+    |> Enum.reduce(%{}, fn x, a -> Map.merge(x, a) end)
   end
 
   def calculate(input), do: "CMZ"
@@ -711,7 +723,7 @@ defmodule ExampleTest do
   use ExUnit.Case
   import Day5Part1
 
-  assert example |> parse_stacks == %{1 => ["N", "Z"], 2 => ["M", "C", "D"], 3 => ["P"]}
+  assert example |> parse_stacks == %{"1" => ["N", "Z"], "2" => ["D", "C", "M"], "3" => ["P"]}
 
   assert example |> calculate == "CMZ"
 end
