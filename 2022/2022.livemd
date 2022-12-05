@@ -701,9 +701,7 @@ defmodule Day5Part1 do
   end
 
   def parse_stacks(input) do
-    [stacks_input, steps_input] = input |> String.split("\n\n")
-
-    stacks_input
+    input
     |> String.split("\n")
     |> Enum.map(&parse_row/1)
     |> Enum.reverse()
@@ -712,7 +710,48 @@ defmodule Day5Part1 do
     |> Enum.reduce(%{}, fn x, a -> Map.merge(x, a) end)
   end
 
-  def calculate(input), do: "CMZ"
+  def parse_step(input) do
+    %{"quantity" => quantity, "from" => from, "to" => to} =
+      Regex.named_captures(~r/move (?<quantity>\d+) from (?<from>\d+) to (?<to>\d+)/, input)
+
+    %{quantity: quantity |> String.to_integer(), from: from, to: to}
+  end
+
+  def parse_procedure(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&parse_step/1)
+  end
+
+  def parse_input(input) do
+    [stacks_input, procedure_input] = input |> String.split("\n\n")
+    {stacks_input |> parse_stacks, procedure_input |> parse_procedure}
+  end
+
+  def rearrange(%{quantity: 0}, stacks), do: stacks
+
+  def rearrange(%{quantity: quantity, from: from, to: to}, stacks) when quantity > 0 do
+    [moved | new_from] = Map.get(stacks, from)
+
+    %{quantity: quantity - 1, from: from, to: to}
+    |> rearrange(%{stacks | from => new_from, to => [moved] ++ Map.get(stacks, to)})
+  end
+
+  def top_crates(stacks) do
+    stacks |> Enum.map(fn {_, stack} -> stack |> hd end)
+  end
+
+  def calculate(input) do
+    {stacks, procedure} = input |> parse_input
+
+    procedure
+    |> Enum.reduce(stacks, &rearrange/2)
+    |> Map.to_list()
+    |> Enum.sort_by(fn {label, _} -> label end)
+    |> top_crates
+    |> Enum.reverse()
+    |> Enum.reduce(&<>/2)
+  end
 end
 ```
 
@@ -723,7 +762,13 @@ defmodule ExampleTest do
   use ExUnit.Case
   import Day5Part1
 
-  assert example |> parse_stacks == %{"1" => ["N", "Z"], "2" => ["D", "C", "M"], "3" => ["P"]}
+  assert example |> parse_input |> elem(0) == %{
+           "1" => ["N", "Z"],
+           "2" => ["D", "C", "M"],
+           "3" => ["P"]
+         }
+
+  assert example |> parse_input |> elem(1) |> hd == %{quantity: 1, from: "2", to: "1"}
 
   assert example |> calculate == "CMZ"
 end
