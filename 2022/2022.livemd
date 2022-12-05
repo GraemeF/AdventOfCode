@@ -728,29 +728,41 @@ defmodule Day5Part1 do
     {stacks_input |> parse_stacks, procedure_input |> parse_procedure}
   end
 
-  def rearrange(%{quantity: 0}, stacks), do: stacks
+  def rearrange(%{quantity: 0}, stacks, _), do: stacks
 
-  def rearrange(%{quantity: quantity, from: from, to: to}, stacks) when quantity > 0 do
-    [moved | new_from] = Map.get(stacks, from)
+  def cratemover_9000(stacks, from, _quantity) do
+    [taken | remaining] = Map.get(stacks, from)
+    {[taken], remaining}
+  end
 
-    %{quantity: quantity - 1, from: from, to: to}
-    |> rearrange(%{stacks | from => new_from, to => [moved] ++ Map.get(stacks, to)})
+  def rearrange(%{quantity: quantity, from: from, to: to}, stacks, pickup) when quantity > 0 do
+    {taken, remaining} = pickup.(stacks, from, quantity)
+
+    %{quantity: quantity - (taken |> Enum.count()), from: from, to: to}
+    |> rearrange(%{stacks | from => remaining, to => taken ++ Map.get(stacks, to)}, pickup)
   end
 
   def top_crates(stacks) do
     stacks |> Enum.map(fn {_, stack} -> stack |> hd end)
   end
 
-  def calculate(input) do
-    {stacks, procedure} = input |> parse_input
-
-    procedure
-    |> Enum.reduce(stacks, &rearrange/2)
+  def to_top_crates_string(stacks) do
+    stacks
     |> Map.to_list()
     |> Enum.sort_by(fn {label, _} -> label end)
     |> top_crates
     |> Enum.reverse()
     |> Enum.reduce(&<>/2)
+  end
+
+  def calculate(input) do
+    {stacks, procedure} = input |> parse_input
+
+    procedure
+    |> Enum.reduce(stacks, fn step, stacks ->
+      rearrange(step, stacks, &Day5Part1.cratemover_9000/3)
+    end)
+    |> to_top_crates_string
   end
 end
 ```
@@ -842,6 +854,37 @@ Finally, a single crate is still moved from stack 1 to stack 2, but now it's cra
 
 In this example, the CrateMover 9001 has put the crates in a totally different order: MCD.
 
-<!-- livebook:{"break_markdown":true} -->
+```elixir
+defmodule Day5Part2 do
+  import Day5Part1
+
+  def cratemover_9001(stacks, from, quantity), do: Map.get(stacks, from) |> Enum.split(quantity)
+
+  def calculate(input) do
+    {stacks, procedure} = input |> parse_input
+
+    procedure
+    |> Enum.reduce(stacks, fn step, stacks ->
+      rearrange(step, stacks, &cratemover_9001/3)
+    end)
+    |> to_top_crates_string
+  end
+end
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule ExampleTestPart2 do
+  use ExUnit.Case
+  import Day5Part2
+
+  assert example |> calculate == "MCD"
+end
+```
 
 Before the rearrangement process finishes, update your simulation so that the Elves know where they should stand to be ready to unload the final supplies. After the rearrangement procedure completes, what crate ends up on top of each stack?
+
+```elixir
+input |> Kino.Input.read() |> Day5Part2.calculate()
+```
