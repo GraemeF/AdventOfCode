@@ -1116,23 +1116,64 @@ defmodule Day7Part1 do
     {cwd ++ [name], files}
   end
 
-  def process({:ls, new_files}, {cwd, files}) do
-    {cwd |> IO.inspect(label: "cwd"),
-     (files
-      |> IO.inspect(label: "files")) ++
-       (new_files
-        |> IO.inspect(label: "new_files")
-        |> Enum.filter(&is_file?/1)
-        |> IO.inspect(label: "no dirs")
-        |> Enum.map(fn {:file, name, size} -> {cwd ++ [name], size} end)
-        |> IO.inspect(label: "mapped files"))}
+  def process({:ls, contents}, {cwd, files}) do
+    {cwd, Map.merge(files, contents |> filter_contents(cwd))}
   end
+
+  def filter_contents(contents, cwd),
+    do:
+      contents
+      |> Enum.filter(&is_file?/1)
+      |> Enum.map(fn {:file, name, size} -> {cwd ++ [name], size} end)
+      |> Enum.into(%{})
 
   def build_tree(commands) do
-    commands |> Enum.reduce({nil, []}, &process/2) |> IO.inspect(label: "file system")
+    {_, files} =
+      commands
+      |> Enum.reduce({nil, %{}}, fn e, a -> process(e, a) end)
+
+    files
   end
 
-  def calculate(input), do: input |> parse |> build_tree
+  def directories(file_path) do
+    0..((file_path |> Enum.count()) - 1)
+    |> Enum.map(fn count -> file_path |> Enum.take(count) end)
+  end
+
+  def size_by_directory(tree) do
+    tree
+    |> Enum.reduce(%{}, fn {path, size}, dirs ->
+      Map.merge(
+        dirs,
+        path
+        |> directories
+        |> Enum.map(fn dir -> {dir, size} end)
+        |> Enum.into(%{}),
+        fn dir, a, b ->
+          {dir, a, b}
+          a + b
+        end
+      )
+    end)
+  end
+
+  def get_directory_size(input, path),
+    do:
+      input
+      |> parse
+      |> build_tree
+      |> size_by_directory
+      |> Map.get(path)
+
+  def calculate(input),
+    do:
+      input
+      |> parse
+      |> build_tree
+      |> size_by_directory
+      |> Map.filter(fn {_, size} -> size <= 100_000 end)
+      |> Enum.map(fn {_, size} -> size end)
+      |> Enum.sum()
 end
 ```
 
@@ -1149,8 +1190,85 @@ defmodule ExampleTest do
             [{:dir, "a"}, {:file, "b.txt", 14_848_514}, {:file, "c.dat", 8_504_156}, {:dir, "d"}]}
          ]
 
+  assert example |> get_directory_size(["a", "e"]) == 584
+  assert example |> get_directory_size(["a"]) == 94853
+  assert example |> get_directory_size(["d"]) == 24_933_642
+
   assert example |> calculate == 95437
 end
 ```
 
 Find all of the directories with a total size of at most 100000. What is the sum of the total sizes of those directories?
+
+```elixir
+input = Kino.Input.textarea("Paste your puzzle input:")
+```
+
+```elixir
+input |> Kino.Input.read() |> Day7Part1.calculate()
+```
+
+### Part Two
+
+Now, you're ready to choose a directory to delete.
+
+The total disk space available to the filesystem is 70000000. To run the update, you need unused space of at least 30000000. You need to find a directory you can delete that will free up enough space to run the update.
+
+In the example above, the total size of the outermost directory (and thus the total amount of used space) is 48381165; this means that the size of the unused space must currently be 21618835, which isn't quite the 30000000 required by the update. Therefore, the update still requires a directory with total size of at least 8381165 to be deleted before it can run.
+
+To achieve this, you have the following options:
+
+* Delete directory e, which would increase unused space by 584.
+* Delete directory a, which would increase unused space by 94853.
+* Delete directory d, which would increase unused space by 24933642.
+* Delete directory /, which would increase unused space by 48381165.
+
+Directories e and a are both too small; deleting them would not free up enough space. However, 
+directories d and / are both big enough! Between these, choose the smallest: d, increasing unused space by 24933642.
+
+Find the smallest directory that, if deleted, would free up enough space on the filesystem to run the update. What is the total size of that directory?
+
+```elixir
+defmodule Day7Part2 do
+  import Day7Part1
+
+  @total_required_space 30_000_000
+  @total_disk_size 70_000_000
+
+  def calculate(input) do
+    directories =
+      input
+      |> parse
+      |> build_tree
+      |> size_by_directory
+
+    space = @total_disk_size - directories[[]]
+    additional_space_required = (@total_required_space - space) |> IO.inspect()
+
+    input
+    |> parse
+    |> build_tree
+    |> size_by_directory
+    |> IO.inspect()
+    |> Map.values()
+    |> Enum.filter(fn size -> size >= additional_space_required end)
+    |> Enum.sort()
+    |> hd
+  end
+end
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule ExampleTest do
+  use ExUnit.Case
+  import Day7Part2
+
+  assert example |> calculate == 24_933_642
+end
+```
+
+```elixir
+input |> Kino.Input.read() |> Day7Part2.calculate()
+```
