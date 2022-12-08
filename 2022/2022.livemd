@@ -1407,3 +1407,125 @@ input = Kino.Input.textarea("Paste your puzzle input:")
 ```elixir
 input |> Kino.Input.read() |> Day8Part1.calculate()
 ```
+
+### Part Two
+
+Content with the amount of tree cover available, the Elves just need to know the best spot to build their tree house: they would like to be able to see a lot of trees.
+
+To measure the viewing distance from a given tree, look up, down, left, and right from that tree; stop if you reach an edge or at the first tree that is the same height or taller than the tree under consideration. (If a tree is right on the edge, at least one of its viewing distances will be zero.)
+
+The Elves don't care about distant trees taller than those found by the rules above; the proposed tree house has large eaves to keep it dry, so they wouldn't be able to see higher than the tree house anyway.
+
+In the example above, consider the middle 5 in the second row:
+
+```
+30373
+25512
+65332
+33549
+35390
+```
+
+* Looking up, its view is not blocked; it can see 1 tree (of height 3).
+* Looking left, its view is blocked immediately; it can see only 1 tree (of height 5, right next to it).
+* Looking right, its view is not blocked; it can see 2 trees.
+* Looking down, its view is blocked eventually; it can see 2 trees (one of height 3, then the tree of height 5 that blocks its view).
+
+A tree's scenic score is found by multiplying together its viewing distance in each of the four directions. For this tree, this is 4 (found by multiplying 1 * 1 * 2 * 2).
+
+```elixir
+defmodule Day8Part2 do
+  import Day8Part1
+
+  def visible_trees(
+        {{_, _} = tree_location, direction},
+        trees,
+        stop_height
+      ) do
+    tree_height =
+      trees
+      |> Map.get(tree_location)
+
+    cond do
+      tree_height == nil ->
+        0
+
+      tree_height < stop_height ->
+        1 +
+          visible_trees({tree_location |> move(direction), direction}, trees, stop_height)
+
+      tree_height >= stop_height ->
+        1
+    end
+  end
+
+  def tree_walks(tree_location) do
+    [
+      {tree_location, {1, 0}},
+      {tree_location, {-1, 0}},
+      {tree_location, {0, 1}},
+      {tree_location, {0, -1}}
+    ]
+    |> Enum.map(fn {location, direction} -> {move(location, direction), direction} end)
+  end
+
+  def scenic_score({location, height}, trees) do
+    location
+    |> tree_walks
+    |> Enum.map(fn walk ->
+      walk
+      |> visible_trees(trees, height)
+    end)
+    |> Enum.reduce(1, fn tree_count, score -> score * tree_count end)
+  end
+
+  def calculate(input) do
+    {trees, _} = input |> parse
+
+    trees |> Enum.map(fn tree -> tree |> scenic_score(trees) end) |> Enum.max()
+  end
+end
+```
+
+However, you can do even better: consider the tree of height 5 in the middle of the fourth row:
+
+```
+30373
+25512
+65332
+33549
+35390
+```
+
+* Looking up, its view is blocked at 2 trees (by another tree with a height of 5).
+* Looking left, its view is not blocked; it can see 2 trees.
+* Looking down, its view is also not blocked; it can see 1 tree.
+* Looking right, its view is blocked at 2 trees (by a massive tree of height 9).
+
+This tree's scenic score is 8 (2 * 2 * 1 * 2); this is the ideal spot for the tree house.
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule Helpers do
+  import Day8Part1
+  import Day8Part2
+
+  def tree_score(location, example) do
+    {trees, _} = example |> parse
+    tree = {location, trees |> Map.get(location)}
+    tree |> scenic_score(trees)
+  end
+end
+
+defmodule ExampleTest do
+  use ExUnit.Case
+  import Day8Part2
+
+  assert example |> calculate == 8
+end
+```
+
+```elixir
+input |> Kino.Input.read() |> Day8Part2.calculate()
+```
