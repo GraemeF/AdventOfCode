@@ -1812,27 +1812,41 @@ defmodule Day9Part1 do
 
   def move_end({dx, dy}, {x, y}), do: {x + dx, y + dy}
 
-  def move_tail({hx, hy}, {tx, ty} = t) when abs(hx - tx) == 2 and abs(hy - ty) == 1,
-    do: {(hx - tx) |> div(2), hy - ty} |> move_end(t)
+  def follow({hx, hy}, {tx, ty}) when abs(hx - tx) == 2 and abs(hy - ty) == 1,
+    do: {(hx - tx) |> div(2), hy - ty}
 
-  def move_tail({hx, hy}, {tx, ty} = t) when abs(hy - ty) == 2 and abs(hx - tx) == 1,
-    do: {hx - tx, (hy - ty) |> div(2)} |> move_end(t)
+  def follow({hx, hy}, {tx, ty}) when abs(hy - ty) == 2 and abs(hx - tx) == 1,
+    do: {hx - tx, (hy - ty) |> div(2)}
 
-  def move_tail({hx, hy}, {tx, ty} = t),
-    do: {(hx - tx) |> div(2), (hy - ty) |> div(2)} |> move_end(t)
+  def follow({hx, hy}, {tx, ty}),
+    do: {(hx - tx) |> div(2), (hy - ty) |> div(2)}
 
-  def move(step, {{head_position, tail_position}, visited_positions}) do
+  def move(step, {{head_position, tail_position}, tail_moves}) do
     new_head_position = step |> move_end(head_position)
-    new_tail_position = new_head_position |> move_tail(tail_position)
+    new_tail_move = new_head_position |> follow(tail_position)
+    new_tail_position = new_tail_move |> move_end(tail_position)
 
-    {{new_head_position, new_tail_position}, visited_positions |> MapSet.put(new_tail_position)}
+    {{new_head_position, new_tail_position}, tail_moves ++ [new_tail_move]}
   end
 
-  def calculate(input) do
-    {_, visited_positions} =
-      input |> parse |> Enum.reduce({{{0, 0}, {0, 0}}, MapSet.new()}, &move/2)
+  def visited_positions(moves),
+    do:
+      moves
+      |> Enum.reduce({{0, 0}, MapSet.new()}, fn move, {position, visited} ->
+        new_position = move |> move_end(position)
+        {new_position, visited |> MapSet.put(new_position)}
+      end)
 
-    visited_positions |> Enum.count()
+  def distinct_positions({_, positions}) do
+    positions |> Enum.into(MapSet.new())
+  end
+
+  def get_tail_moves(head_moves), do: head_moves |> Enum.reduce({{{0, 0}, {0, 0}}, []}, &move/2)
+
+  def calculate(input) do
+    {_, tail_moves} = input |> parse |> get_tail_moves
+
+    tail_moves |> visited_positions |> distinct_positions |> Enum.count()
   end
 end
 ```
@@ -2275,7 +2289,19 @@ H.........................
 
 ```elixir
 defmodule Day9Part2 do
-  def calculate(input), do: input
+  import Day9Part1
+
+  def get_knot_moves(moves, 0), do: moves
+  def get_knot_moves({_, moves}, knots), do: get_knot_moves(moves, knots)
+
+  def get_knot_moves(moves, knots),
+    do: moves |> get_tail_moves |> get_knot_moves(knots - 1)
+
+  def calculate(input) do
+    {_, tail_moves} = input |> parse |> get_knot_moves(9)
+
+    tail_moves |> visited_positions |> distinct_positions |> Enum.count()
+  end
 end
 ```
 
@@ -2305,12 +2331,14 @@ Now, the tail (9) visits 36 positions (including s) at least once:
 .........########.........
 ```
 
+<!-- livebook:{"reevaluate_automatically":true} -->
+
 ```elixir
 defmodule LargerExampleTest do
   use ExUnit.Case
   import Day9Part2
 
-  assert example |> calculate == 36
+  assert larger_example |> calculate == 36
 end
 ```
 
