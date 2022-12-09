@@ -1792,7 +1792,48 @@ So, there are 13 positions the tail visited at least once.
 
 ```elixir
 defmodule Day9Part1 do
-  def calculate(input), do: input
+  def vector("R"), do: {1, 0}
+  def vector("U"), do: {0, -1}
+  def vector("L"), do: {-1, 0}
+  def vector("D"), do: {0, 1}
+
+  def expand({direction, steps}), do: 1..steps |> Enum.map(fn _ -> direction |> vector end)
+
+  def parse(input),
+    do:
+      input
+      |> String.split("\n")
+      |> Enum.map(fn line ->
+        line
+        |> String.split(" ")
+        |> Kernel.then(fn [direction, steps] -> {direction, steps |> String.to_integer()} end)
+      end)
+      |> Enum.flat_map(&expand/1)
+
+  def move_end({dx, dy}, {x, y}), do: {x + dx, y + dy}
+
+  def move_tail({hx, hy}, {tx, ty} = t) when abs(hx - tx) == 2 and abs(hy - ty) == 1,
+    do: {(hx - tx) |> div(2), hy - ty} |> move_end(t)
+
+  def move_tail({hx, hy}, {tx, ty} = t) when abs(hy - ty) == 2 and abs(hx - tx) == 1,
+    do: {hx - tx, (hy - ty) |> div(2)} |> move_end(t)
+
+  def move_tail({hx, hy}, {tx, ty} = t),
+    do: {(hx - tx) |> div(2), (hy - ty) |> div(2)} |> move_end(t)
+
+  def move(step, {{head_position, tail_position}, visited_positions}) do
+    new_head_position = step |> move_end(head_position)
+    new_tail_position = new_head_position |> move_tail(tail_position)
+
+    {{new_head_position, new_tail_position}, visited_positions |> MapSet.put(new_tail_position)}
+  end
+
+  def calculate(input) do
+    {_, visited_positions} =
+      input |> parse |> Enum.reduce({{{0, 0}, {0, 0}}, MapSet.new()}, &move/2)
+
+    visited_positions |> Enum.count()
+  end
 end
 ```
 
