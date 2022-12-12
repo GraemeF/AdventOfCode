@@ -2954,6 +2954,11 @@ defmodule Day11Part1 do
     fn old -> n * old end
   end
 
+  def parse_test("divisible by " <> n_str) do
+    n = n_str |> String.to_integer()
+    fn worry_level -> worry_level |> rem(n) == 0 end
+  end
+
   def parse_line("Monkey " <> id_colon, {_, props}),
     do: {id_colon |> String.trim_trailing(":") |> String.to_integer(), props}
 
@@ -2971,7 +2976,8 @@ defmodule Day11Part1 do
   def parse_line("Operation: new = " <> operation, {id, props}),
     do: {id, props |> Map.put(:operation, operation |> parse_operation)}
 
-  def parse_line("Test: " <> test, {id, props}), do: {id, props |> Map.put(:test, test)}
+  def parse_line("Test: " <> test, {id, props}),
+    do: {id, props |> Map.put(:test, test |> parse_test)}
 
   def parse_line("If true: throw to monkey " <> monkey, {id, props}),
     do: {id, props |> Map.put(true, monkey |> String.to_integer())}
@@ -2996,24 +3002,41 @@ defmodule Day11Part1 do
         monkey_input |> parse_monkey |> add_monkey(monkeys)
       end)
 
-  def inspect_item(item, monkeys), do: monkeys
+  def throw(monkeys, id, item),
+    do:
+      monkeys
+      |> Map.update!(id, fn props ->
+        props |> Map.update!(:items, fn items -> items ++ [item] end)
+      end)
 
-  def pop_item(monkeys, monkey_id) do
-    item = monkeys[monkey_id][:items] |> hd |> IO.inspect()
+  def inspect_item(monkeys, props, old) do
+    new = old |> props[:operation].()
+    worry_level = new |> div(3)
 
-    {item,
-     monkeys
-     |> Map.update!(monkey_id, fn monkey ->
-       monkey |> Map.update!(:items, fn items -> items |> tl end)
-     end)}
+    result = worry_level |> props[:test].()
+    receiving_monkey = props[result]
+
+    monkeys |> throw(receiving_monkey, worry_level)
   end
 
-  def process_turn({id, props}, monkeys) do
-    props[:items] |> Enum.reduce(monkeys |> Map.put(id, props), &inspect_item/2)
+  def process_turn({id, props} = monkey, monkeys) do
+    items = props[:items]
+    props = props |> Map.put(:items, [])
+    monkeys = monkeys |> Map.put(id, props)
+
+    items |> Enum.reduce(monkeys, fn item, monkeys -> monkeys |> inspect_item(props, item) end)
   end
 
   def process_round(monkeys) do
     monkeys |> Enum.reduce(monkeys, &process_turn/2)
+  end
+
+  def process_rounds(monkeys, 0) do
+    monkeys
+  end
+
+  def process_rounds(monkeys, rounds) do
+    monkeys |> process_round |> IO.inspect(label: "round #{rounds}") |> process_rounds(rounds - 1)
   end
 
   def calculate(input), do: input |> parse
@@ -3030,6 +3053,14 @@ defmodule Day11ExampleTest do
   assert example |> parse |> Map.get(0) |> Map.get(:items) == [79, 98]
 
   assert example |> parse |> process_round |> Map.get(0) |> Map.get(:items) == [20, 23, 27, 26]
+
+  assert example |> parse |> process_rounds(20) |> Map.get(0) |> Map.get(:items) == [
+           10,
+           12,
+           14,
+           26,
+           34
+         ]
 end
 ```
 
