@@ -2940,6 +2940,20 @@ Monkey 3:
 
 ```elixir
 defmodule Day11Part1 do
+  def parse_operation("old * old") do
+    fn old -> old * old end
+  end
+
+  def parse_operation("old + " <> n_str) do
+    n = n_str |> String.to_integer()
+    fn old -> n + old end
+  end
+
+  def parse_operation("old * " <> n_str) do
+    n = n_str |> String.to_integer()
+    fn old -> n * old end
+  end
+
   def parse_line("Monkey " <> id_colon, {_, props}),
     do: {id_colon |> String.trim_trailing(":") |> String.to_integer(), props}
 
@@ -2955,7 +2969,7 @@ defmodule Day11Part1 do
   end
 
   def parse_line("Operation: new = " <> operation, {id, props}),
-    do: {id, props |> Map.put(:operation, operation)}
+    do: {id, props |> Map.put(:operation, operation |> parse_operation)}
 
   def parse_line("Test: " <> test, {id, props}), do: {id, props |> Map.put(:test, test)}
 
@@ -2982,6 +2996,26 @@ defmodule Day11Part1 do
         monkey_input |> parse_monkey |> add_monkey(monkeys)
       end)
 
+  def inspect_item(item, monkeys), do: monkeys
+
+  def pop_item(monkeys, monkey_id) do
+    item = monkeys[monkey_id][:items] |> hd |> IO.inspect()
+
+    {item,
+     monkeys
+     |> Map.update!(monkey_id, fn monkey ->
+       monkey |> Map.update!(:items, fn items -> items |> tl end)
+     end)}
+  end
+
+  def process_turn({id, props}, monkeys) do
+    props[:items] |> Enum.reduce(monkeys |> Map.put(id, props), &inspect_item/2)
+  end
+
+  def process_round(monkeys) do
+    monkeys |> Enum.reduce(monkeys, &process_turn/2)
+  end
+
   def calculate(input), do: input |> parse
 end
 ```
@@ -2994,6 +3028,8 @@ defmodule Day11ExampleTest do
   import Day11Part1
 
   assert example |> parse |> Map.get(0) |> Map.get(:items) == [79, 98]
+
+  assert example |> parse |> process_round |> Map.get(0) |> Map.get(:items) == [20, 23, 27, 26]
 end
 ```
 
