@@ -3357,16 +3357,16 @@ This path reaches the goal in 31 steps, the fewest possible.
 
 ```elixir
 defmodule Day12Part1 do
-  def parse_square({"S", {x, y} = location}, {start_location, end_location, heightmap} = map),
+  def parse_square({"S", location}, {_, end_location, heightmap}),
     do: {location, end_location, heightmap |> Map.put_new(location, "a")}
 
-  def parse_square({"E", {x, y} = location}, {start_location, end_location, heightmap} = map),
+  def parse_square({"E", location}, {start_location, _, heightmap}),
     do: {start_location, location, heightmap |> Map.put_new(location, "z")}
 
-  def parse_square({height, {x, y} = location}, {start_location, end_location, heightmap} = map),
+  def parse_square({height, location}, {start_location, end_location, heightmap}),
     do: {start_location, end_location, heightmap |> Map.put_new(location, height)}
 
-  def parse_row({input, y}, {start_location, end_location, heightmap} = map),
+  def parse_row({input, y}, map),
     do:
       input
       |> String.graphemes()
@@ -3381,8 +3381,59 @@ defmodule Day12Part1 do
       |> Enum.with_index()
       |> Enum.reduce({nil, nil, %{}}, &parse_row/2)
 
+  def neighbours({x, y}), do: [{x - 1, y}, {x, y - 1}, {x + 1, y}, {x, y + 1}]
+
+  def unvisited?(visited_squares, square),
+    do: visited_squares |> MapSet.member?(square) |> Kernel.not()
+
+  def navigable_height_difference?(from, to),
+    do: (to |> String.to_charlist() |> hd) - (from |> String.to_charlist() |> hd) <= 1
+
+  def navigable_step?(_, nil, _), do: false
+  def navigable_step?(from, to, map), do: navigable_height_difference?(map[from], map[to])
+
+  def shortest_path({square, square, _}, _), do: [square]
+
+  def shortest_path({{x, y} = square, end_square, heightmap}, visited_squares) do
+    visited_squares =
+      visited_squares
+      |> MapSet.put(square |> IO.inspect(label: "square"))
+
+    unvisited_neighbours =
+      square
+      |> neighbours
+      |> Enum.filter(fn neighbour -> heightmap |> Map.has_key?(neighbour) end)
+      |> Enum.filter(fn neighbour -> visited_squares |> unvisited?(neighbour) end)
+      |> Enum.filter(fn neighbour -> square |> navigable_step?(neighbour, heightmap) end)
+
+    case unvisited_neighbours do
+      [] ->
+        :dead_end
+
+      [:dead_end] ->
+        :dead_end
+
+      _ ->
+        [
+          square
+          | unvisited_neighbours
+            |> Enum.map(fn neighbour ->
+              shortest_path({neighbour, end_square, heightmap}, visited_squares)
+            end)
+            |> IO.inspect(label: "shortest_path #{x},#{y}")
+            |> Enum.sort_by(&Enum.count/1)
+            |> hd
+        ]
+    end
+  end
+
+  def shortest_path(map) do
+    shortest_path(map, MapSet.new())
+    |> Enum.count()
+  end
+
   def calculate(input) do
-    input |> parse
+    input |> parse |> shortest_path
   end
 end
 ```
