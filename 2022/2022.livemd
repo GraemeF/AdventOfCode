@@ -2938,6 +2938,95 @@ Monkey 2:
 Monkey 3: 
 ```
 
+<!-- livebook:{"break_markdown":true} -->
+
+Monkeys 2 and 3 aren't holding any items at the end of the round; they both inspected items during the round and threw them all before the round ended.
+
+This process continues for a few more rounds:
+
+```
+After round 2, the monkeys are holding items with these worry levels:
+Monkey 0: 695, 10, 71, 135, 350
+Monkey 1: 43, 49, 58, 55, 362
+Monkey 2: 
+Monkey 3: 
+
+After round 3, the monkeys are holding items with these worry levels:
+Monkey 0: 16, 18, 21, 20, 122
+Monkey 1: 1468, 22, 150, 286, 739
+Monkey 2: 
+Monkey 3: 
+
+After round 4, the monkeys are holding items with these worry levels:
+Monkey 0: 491, 9, 52, 97, 248, 34
+Monkey 1: 39, 45, 43, 258
+Monkey 2: 
+Monkey 3: 
+
+After round 5, the monkeys are holding items with these worry levels:
+Monkey 0: 15, 17, 16, 88, 1037
+Monkey 1: 20, 110, 205, 524, 72
+Monkey 2: 
+Monkey 3: 
+
+After round 6, the monkeys are holding items with these worry levels:
+Monkey 0: 8, 70, 176, 26, 34
+Monkey 1: 481, 32, 36, 186, 2190
+Monkey 2: 
+Monkey 3: 
+
+After round 7, the monkeys are holding items with these worry levels:
+Monkey 0: 162, 12, 14, 64, 732, 17
+Monkey 1: 148, 372, 55, 72
+Monkey 2: 
+Monkey 3: 
+
+After round 8, the monkeys are holding items with these worry levels:
+Monkey 0: 51, 126, 20, 26, 136
+Monkey 1: 343, 26, 30, 1546, 36
+Monkey 2: 
+Monkey 3: 
+
+After round 9, the monkeys are holding items with these worry levels:
+Monkey 0: 116, 10, 12, 517, 14
+Monkey 1: 108, 267, 43, 55, 288
+Monkey 2: 
+Monkey 3: 
+
+After round 10, the monkeys are holding items with these worry levels:
+Monkey 0: 91, 16, 20, 98
+Monkey 1: 481, 245, 22, 26, 1092, 30
+Monkey 2: 
+Monkey 3: 
+
+...
+
+After round 15, the monkeys are holding items with these worry levels:
+Monkey 0: 83, 44, 8, 184, 9, 20, 26, 102
+Monkey 1: 110, 36
+Monkey 2: 
+Monkey 3: 
+
+...
+
+After round 20, the monkeys are holding items with these worry levels:
+Monkey 0: 10, 12, 14, 26, 34
+Monkey 1: 245, 93, 53, 199, 115
+Monkey 2: 
+Monkey 3: 
+```
+
+Chasing all of the monkeys at once is impossible; you're going to have to focus on the two most active monkeys if you want any hope of getting your stuff back. Count the total number of times each monkey inspects items over 20 rounds:
+
+```
+Monkey 0 inspected items 101 times.
+Monkey 1 inspected items 95 times.
+Monkey 2 inspected items 7 times.
+Monkey 3 inspected items 105 times.
+```
+
+In this example, the two most active monkeys inspected items 101 and 105 times. The level of monkey business in this situation can be found by multiplying these together: 10605.
+
 ```elixir
 defmodule Day11Part1 do
   def parse_operation("old * old") do
@@ -3019,7 +3108,8 @@ defmodule Day11Part1 do
     monkeys |> throw(receiving_monkey, worry_level)
   end
 
-  def process_turn({id, props} = monkey, monkeys) do
+  def process_turn(id, monkeys) do
+    props = monkeys[id]
     items = props[:items]
     props = props |> Map.put(:items, [])
     monkeys = monkeys |> Map.put(id, props)
@@ -3028,7 +3118,7 @@ defmodule Day11Part1 do
   end
 
   def process_round(monkeys) do
-    monkeys |> Enum.reduce(monkeys, &process_turn/2)
+    monkeys |> Map.keys() |> Enum.reduce(monkeys, &process_turn/2)
   end
 
   def process_rounds(monkeys, 0) do
@@ -3036,7 +3126,11 @@ defmodule Day11Part1 do
   end
 
   def process_rounds(monkeys, rounds) do
-    monkeys |> process_round |> IO.inspect(label: "round #{rounds}") |> process_rounds(rounds - 1)
+    monkeys |> process_round |> process_rounds(rounds - 1)
+  end
+
+  def count_inspections(monkeys, rounds) do
+    monkeys |> process_rounds(rounds)
   end
 
   def calculate(input), do: input |> parse
@@ -3054,6 +3148,18 @@ defmodule Day11ExampleTest do
 
   assert example |> parse |> process_round |> Map.get(0) |> Map.get(:items) == [20, 23, 27, 26]
 
+  assert example |> parse |> process_round |> Map.get(1) |> Map.get(:items) == [
+           2080,
+           25,
+           167,
+           207,
+           401,
+           1046
+         ]
+
+  assert example |> parse |> process_round |> Map.get(2) |> Map.get(:items) == []
+  assert example |> parse |> process_round |> Map.get(3) |> Map.get(:items) == []
+
   assert example |> parse |> process_rounds(20) |> Map.get(0) |> Map.get(:items) == [
            10,
            12,
@@ -3061,81 +3167,7 @@ defmodule Day11ExampleTest do
            26,
            34
          ]
+
+  assert example |> parse |> count_inspections(20) == %{0 => 101, 1 => 95, 2 => 7, 3 => 105}
 end
-```
-
-Monkeys 2 and 3 aren't holding any items at the end of the round; they both inspected items during the round and threw them all before the round ended.
-
-This process continues for a few more rounds:
-
-```
-After round 2, the monkeys are holding items with these worry levels:
-Monkey 0: 695, 10, 71, 135, 350
-Monkey 1: 43, 49, 58, 55, 362
-Monkey 2: 
-Monkey 3: 
-
-After round 3, the monkeys are holding items with these worry levels:
-Monkey 0: 16, 18, 21, 20, 122
-Monkey 1: 1468, 22, 150, 286, 739
-Monkey 2: 
-Monkey 3: 
-
-After round 4, the monkeys are holding items with these worry levels:
-Monkey 0: 491, 9, 52, 97, 248, 34
-Monkey 1: 39, 45, 43, 258
-Monkey 2: 
-Monkey 3: 
-
-After round 5, the monkeys are holding items with these worry levels:
-Monkey 0: 15, 17, 16, 88, 1037
-Monkey 1: 20, 110, 205, 524, 72
-Monkey 2: 
-Monkey 3: 
-
-After round 6, the monkeys are holding items with these worry levels:
-Monkey 0: 8, 70, 176, 26, 34
-Monkey 1: 481, 32, 36, 186, 2190
-Monkey 2: 
-Monkey 3: 
-
-After round 7, the monkeys are holding items with these worry levels:
-Monkey 0: 162, 12, 14, 64, 732, 17
-Monkey 1: 148, 372, 55, 72
-Monkey 2: 
-Monkey 3: 
-
-After round 8, the monkeys are holding items with these worry levels:
-Monkey 0: 51, 126, 20, 26, 136
-Monkey 1: 343, 26, 30, 1546, 36
-Monkey 2: 
-Monkey 3: 
-
-After round 9, the monkeys are holding items with these worry levels:
-Monkey 0: 116, 10, 12, 517, 14
-Monkey 1: 108, 267, 43, 55, 288
-Monkey 2: 
-Monkey 3: 
-
-After round 10, the monkeys are holding items with these worry levels:
-Monkey 0: 91, 16, 20, 98
-Monkey 1: 481, 245, 22, 26, 1092, 30
-Monkey 2: 
-Monkey 3: 
-
-...
-
-After round 15, the monkeys are holding items with these worry levels:
-Monkey 0: 83, 44, 8, 184, 9, 20, 26, 102
-Monkey 1: 110, 36
-Monkey 2: 
-Monkey 3: 
-
-...
-
-After round 20, the monkeys are holding items with these worry levels:
-Monkey 0: 10, 12, 14, 26, 34
-Monkey 1: 245, 93, 53, 199, 115
-Monkey 2: 
-Monkey 3: 
 ```
