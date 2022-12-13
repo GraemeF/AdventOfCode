@@ -3079,7 +3079,9 @@ defmodule Day11Part1 do
       input
       |> String.split("\n")
       |> Enum.map(&String.trim/1)
-      |> Enum.reduce({nil, %{}}, fn line, monkey -> line |> parse_line(monkey) end)
+      |> Enum.reduce({nil, %{inspections_count: 0}}, fn line, monkey ->
+        line |> parse_line(monkey)
+      end)
 
   def add_monkey({id, props}, monkeys), do: monkeys |> Map.put(id, props)
 
@@ -3098,14 +3100,21 @@ defmodule Day11Part1 do
         props |> Map.update!(:items, fn items -> items ++ [item] end)
       end)
 
-  def inspect_item(monkeys, props, old) do
+  def count_inspection(monkeys, id),
+    do:
+      monkeys
+      |> Map.update!(id, fn props ->
+        props |> Map.update!(:inspections_count, fn count -> count + 1 end)
+      end)
+
+  def inspect_item(monkeys, id, props, old) do
     new = old |> props[:operation].()
     worry_level = new |> div(3)
 
     result = worry_level |> props[:test].()
     receiving_monkey = props[result]
 
-    monkeys |> throw(receiving_monkey, worry_level)
+    monkeys |> count_inspection(id) |> throw(receiving_monkey, worry_level)
   end
 
   def process_turn(id, monkeys) do
@@ -3114,7 +3123,8 @@ defmodule Day11Part1 do
     props = props |> Map.put(:items, [])
     monkeys = monkeys |> Map.put(id, props)
 
-    items |> Enum.reduce(monkeys, fn item, monkeys -> monkeys |> inspect_item(props, item) end)
+    items
+    |> Enum.reduce(monkeys, fn item, monkeys -> monkeys |> inspect_item(id, props, item) end)
   end
 
   def process_round(monkeys) do
@@ -3130,10 +3140,22 @@ defmodule Day11Part1 do
   end
 
   def count_inspections(monkeys, rounds) do
-    monkeys |> process_rounds(rounds)
+    monkeys
+    |> process_rounds(rounds)
+    |> Enum.reduce(%{}, fn {id, props}, counts ->
+      counts |> Map.put(id, props[:inspections_count])
+    end)
   end
 
-  def calculate(input), do: input |> parse
+  def calculate(input),
+    do:
+      input
+      |> parse
+      |> count_inspections(20)
+      |> Map.values()
+      |> Enum.sort(:desc)
+      |> Enum.take(2)
+      |> Enum.reduce(fn a, b -> a * b end)
 end
 ```
 
@@ -3169,5 +3191,14 @@ defmodule Day11ExampleTest do
          ]
 
   assert example |> parse |> count_inspections(20) == %{0 => 101, 1 => 95, 2 => 7, 3 => 105}
+  assert example |> calculate == 10605
 end
+```
+
+```elixir
+input = Kino.Input.textarea("Paste your puzzle input:")
+```
+
+```elixir
+input |> Kino.Input.read() |> Day11Part1.calculate()
 ```
