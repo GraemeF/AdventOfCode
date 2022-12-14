@@ -3950,7 +3950,31 @@ Once all 24 units of sand shown above have come to rest, all further sand flows 
 
 ```elixir
 defmodule Day14Part1 do
-  def calculate(input), do: input
+  def parse_coordinate(input),
+    do:
+      input
+      |> String.split(",")
+      |> Enum.map(&String.to_integer/1)
+      |> Enum.to_list()
+      |> List.to_tuple()
+
+  def parse_path(input), do: input |> String.split(" -> ") |> Enum.map(&parse_coordinate/1)
+  def parse(input), do: input |> String.split("\n") |> Enum.map(&parse_path/1)
+
+  def plot_path({{x, y1}, {x, y2}}, cave),
+    do: y1..y2 |> Enum.reduce(cave, fn y, cave -> cave |> Map.put({x, y}, :rock) end)
+
+  def plot_path({{x1, y}, {x2, y}}, cave),
+    do: x1..x2 |> Enum.reduce(cave, fn x, cave -> cave |> Map.put({x, y}, :rock) end)
+
+  def plot_rock([_], cave),
+    do: cave
+
+  def plot_rock([from, to | rest], cave),
+    do: [to | rest] |> plot_rock({from, to} |> plot_path(cave))
+
+  def plot(rock_paths), do: rock_paths |> Enum.reduce(%{}, &plot_rock/2)
+  def calculate(input), do: input |> parse |> plot
 end
 ```
 
