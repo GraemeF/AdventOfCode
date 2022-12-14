@@ -1,7 +1,7 @@
 # Advent of Code 2022
 
 ```elixir
-Mix.install(kino: "~> 0.7.0")
+Mix.install(kino: "~> 0.7.0", libgraph: "~> 0.16.0")
 ExUnit.start()
 ```
 
@@ -3383,54 +3383,35 @@ defmodule Day12Part1 do
 
   def neighbours({x, y}), do: [{x - 1, y}, {x, y - 1}, {x + 1, y}, {x, y + 1}]
 
-  def unvisited?(visited_squares, square),
-    do: visited_squares |> MapSet.member?(square) |> Kernel.not()
-
   def navigable_height_difference?(from, to),
     do: (to |> String.to_charlist() |> hd) - (from |> String.to_charlist() |> hd) <= 1
 
   def navigable_step?(_, nil, _), do: false
   def navigable_step?(from, to, map), do: navigable_height_difference?(map[from], map[to])
 
-  def shortest_path({square, square, _}, _), do: [square]
-
-  def shortest_path({square, end_square, heightmap}, visited_squares) do
-    visited_squares =
-      visited_squares
-      |> MapSet.put(square)
-
-    unvisited_neighbours =
-      square
-      |> neighbours
-      |> Enum.filter(fn neighbour -> heightmap |> Map.has_key?(neighbour) end)
-      |> Enum.filter(fn neighbour -> visited_squares |> unvisited?(neighbour) end)
-      |> Enum.filter(fn neighbour -> square |> navigable_step?(neighbour, heightmap) end)
-
-    case unvisited_neighbours
-         |> Enum.map(fn neighbour ->
-           shortest_path({neighbour, end_square, heightmap}, visited_squares)
-         end)
-         |> Enum.filter(fn neighbour_shortest_path -> neighbour_shortest_path != :dead_end end) do
-      [] ->
-        :dead_end
-
-      neighbour_paths ->
-        [
-          square
-          | neighbour_paths
-            |> Enum.sort_by(&Enum.count/1)
-            |> hd
-        ]
-    end
+  def add_neighbours(graph, square, heightmap) do
+    square
+    |> neighbours
+    |> Enum.filter(fn neighbour -> heightmap |> Map.has_key?(neighbour) end)
+    |> Enum.filter(fn neighbour -> square |> navigable_step?(neighbour, heightmap) end)
+    |> Enum.reduce(graph, fn neighbour, graph -> graph |> Graph.add_edge(square, neighbour) end)
   end
 
-  def shortest_path(map) do
-    (shortest_path(map, MapSet.new())
-     |> Enum.count()) - 1
+  def add_edges(graph, heightmap) do
+    heightmap
+    |> Map.keys()
+    |> Enum.reduce(graph, fn square, graph -> graph |> add_neighbours(square, heightmap) end)
+  end
+
+  def to_graph(map) do
+    Graph.new() |> add_edges(map)
   end
 
   def calculate(input) do
-    input |> parse |> shortest_path
+    {start_square, end_square, heightmap} = input |> parse
+
+    (heightmap |> to_graph |> Graph.get_shortest_path(start_square, end_square) |> Enum.count()) -
+      1
   end
 end
 ```
