@@ -3394,10 +3394,10 @@ defmodule Day12Part1 do
 
   def shortest_path({square, square, _}, _), do: [square]
 
-  def shortest_path({{x, y} = square, end_square, heightmap}, visited_squares) do
+  def shortest_path({square, end_square, heightmap}, visited_squares) do
     visited_squares =
       visited_squares
-      |> MapSet.put(square |> IO.inspect(label: "square"))
+      |> MapSet.put(square)
 
     unvisited_neighbours =
       square
@@ -3406,21 +3406,18 @@ defmodule Day12Part1 do
       |> Enum.filter(fn neighbour -> visited_squares |> unvisited?(neighbour) end)
       |> Enum.filter(fn neighbour -> square |> navigable_step?(neighbour, heightmap) end)
 
-    case unvisited_neighbours do
+    case unvisited_neighbours
+         |> Enum.map(fn neighbour ->
+           shortest_path({neighbour, end_square, heightmap}, visited_squares)
+         end)
+         |> Enum.filter(fn neighbour_shortest_path -> neighbour_shortest_path != :dead_end end) do
       [] ->
         :dead_end
 
-      [:dead_end] ->
-        :dead_end
-
-      _ ->
+      neighbour_paths ->
         [
           square
-          | unvisited_neighbours
-            |> Enum.map(fn neighbour ->
-              shortest_path({neighbour, end_square, heightmap}, visited_squares)
-            end)
-            |> IO.inspect(label: "shortest_path #{x},#{y}")
+          | neighbour_paths
             |> Enum.sort_by(&Enum.count/1)
             |> hd
         ]
@@ -3428,8 +3425,8 @@ defmodule Day12Part1 do
   end
 
   def shortest_path(map) do
-    shortest_path(map, MapSet.new())
-    |> Enum.count()
+    (shortest_path(map, MapSet.new())
+     |> Enum.count()) - 1
   end
 
   def calculate(input) do
