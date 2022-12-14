@@ -3950,6 +3950,8 @@ Once all 24 units of sand shown above have come to rest, all further sand flows 
 
 ```elixir
 defmodule Day14Part1 do
+  @sand_source {500, 0}
+
   def parse_coordinate(input),
     do:
       input
@@ -3974,7 +3976,39 @@ defmodule Day14Part1 do
     do: [to | rest] |> plot_rock({from, to} |> plot_path(cave))
 
   def plot(rock_paths), do: rock_paths |> Enum.reduce(%{}, &plot_rock/2)
-  def calculate(input), do: input |> parse |> plot
+
+  def next_tiles({x, y}), do: [{x, y + 1}, {x - 1, y + 1}, {x + 1, y + 1}]
+
+  def fall(_, {_, y}, lowest_rock) when y > lowest_rock, do: :falling_forever
+
+  def fall(cave, tile, lowest_rock) do
+    case tile
+         |> next_tiles
+         |> Enum.find(fn tile -> cave |> Map.has_key?(tile) |> Kernel.not() end)
+         |> IO.inspect(label: "fall") do
+      nil -> tile
+      next_tile -> cave |> fall(next_tile, lowest_rock)
+    end
+  end
+
+  def drop_sand(cave, lowest_rock) do
+    case cave |> fall(@sand_source, lowest_rock) |> IO.inspect() do
+      :falling_forever ->
+        cave
+
+      new_sand_tile ->
+        cave
+        |> Map.put_new(new_sand_tile, :sand)
+        |> drop_sand
+    end
+  end
+
+  def drop_sand(cave) do
+    lowest_rock = cave |> Map.keys() |> Enum.max_by(fn {_, y} -> y end)
+    cave |> drop_sand(lowest_rock)
+  end
+
+  def calculate(input), do: input |> parse |> plot |> drop_sand()
 end
 ```
 
