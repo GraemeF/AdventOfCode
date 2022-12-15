@@ -3984,15 +3984,17 @@ defmodule Day14Part1 do
   def fall(cave, tile, lowest_rock) do
     case tile
          |> next_tiles
-         |> Enum.find(fn tile -> cave |> Map.has_key?(tile) |> Kernel.not() end)
-         |> IO.inspect(label: "fall") do
-      nil -> tile
-      next_tile -> cave |> fall(next_tile, lowest_rock)
+         |> Enum.find(fn tile -> cave |> Map.has_key?(tile) |> Kernel.not() end) do
+      nil ->
+        tile
+
+      next_tile ->
+        cave |> fall(next_tile, lowest_rock)
     end
   end
 
   def drop_sand(cave, lowest_rock) do
-    case cave |> fall(@sand_source, lowest_rock) |> IO.inspect() do
+    case cave |> fall(@sand_source, lowest_rock) do
       :falling_forever ->
         cave
 
@@ -4004,11 +4006,14 @@ defmodule Day14Part1 do
   end
 
   def drop_sand(cave) do
-    lowest_rock = cave |> Map.keys() |> Enum.max_by(fn {_, y} -> y end)
+    {_, lowest_rock} = cave |> Map.keys() |> Enum.max_by(fn {_, y} -> y end)
     cave |> drop_sand(lowest_rock)
   end
 
-  def calculate(input), do: input |> parse |> plot |> drop_sand()
+  def count_sand(cave),
+    do: cave |> Map.to_list() |> Enum.count(fn {_, contents} -> contents == :sand end)
+
+  def calculate(input), do: input |> parse |> plot |> drop_sand() |> count_sand
 end
 ```
 
@@ -4021,4 +4026,117 @@ defmodule ExampleTest do
 
   assert example |> calculate == 24
 end
+```
+
+Using your scan, simulate the falling sand. How many units of sand come to rest before sand starts flowing into the abyss below?
+
+```elixir
+input = Kino.Input.textarea("Paste your puzzle input:")
+```
+
+```elixir
+input |> Kino.Input.read() |> Day14Part1.calculate()
+```
+
+### Part Two
+
+You realize you misread the scan. There isn't an endless void at the bottom of the scan - there's floor, and you're standing on it!
+
+You don't have time to scan the floor, so assume the floor is an infinite horizontal line with a y coordinate equal to two plus the highest y coordinate of any point in your scan.
+
+In the example above, the highest y coordinate of any point is 9, and so the floor is at y=11. (This is as if your scan contained one extra rock path like -infinity,11 -> infinity,11.) With the added floor, the example above now looks like this:
+
+```
+        ...........+........
+        ....................
+        ....................
+        ....................
+        .........#...##.....
+        .........#...#......
+        .......###...#......
+        .............#......
+        .............#......
+        .....#########......
+        ....................
+<-- etc #################### etc -->
+```
+
+To find somewhere safe to stand, you'll need to simulate falling sand until a unit of sand comes to rest at 500,0, blocking the source entirely and stopping the flow of sand into the cave. In the example above, the situation finally looks like this after 93 units of sand come to rest:
+
+```
+............o............
+...........ooo...........
+..........ooooo..........
+.........ooooooo.........
+........oo#ooo##o........
+.......ooo#ooo#ooo.......
+......oo###ooo#oooo......
+.....oooo.oooo#ooooo.....
+....oooooooooo#oooooo....
+...ooo#########ooooooo...
+..ooooo.......ooooooooo..
+#########################
+```
+
+```elixir
+defmodule Day14Part2 do
+  @sand_source {500, 0}
+
+  def fall_to_floor(_, {_, y} = tile, floor) when y == floor - 1, do: tile
+
+  def fall_to_floor(cave, tile, floor) do
+    case tile
+         |> Day14Part1.next_tiles()
+         |> Enum.find(fn tile -> cave |> Map.has_key?(tile) |> Kernel.not() end) do
+      nil ->
+        tile
+
+      next_tile ->
+        cave |> fall_to_floor(next_tile, floor)
+    end
+  end
+
+  def drop_sand_to_floor(cave, floor) do
+    case cave |> fall_to_floor(@sand_source, floor) do
+      @sand_source ->
+        cave |> Map.put_new(@sand_source, :sand)
+
+      new_sand_tile ->
+        cave
+        |> Map.put_new(new_sand_tile, :sand)
+        |> drop_sand_to_floor(floor)
+    end
+  end
+
+  def drop_sand_to_floor(cave) do
+    {_, lowest_rock} = cave |> Map.keys() |> Enum.max_by(fn {_, y} -> y end)
+
+    cave |> drop_sand_to_floor(lowest_rock + 2)
+  end
+
+  def calculate(input),
+    do:
+      input
+      |> Day14Part1.parse()
+      |> Day14Part1.plot()
+      |> drop_sand_to_floor()
+      |> Day14Part1.count_sand()
+end
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule ExampleTest2 do
+  use ExUnit.Case
+  import Day14Part2
+
+  assert example |> calculate == 93
+end
+```
+
+Using your scan, simulate the falling sand until the source of the sand becomes blocked. How many units of sand come to rest?
+
+```elixir
+input |> Kino.Input.read() |> Day14Part2.calculate()
 ```
