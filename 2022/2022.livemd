@@ -4252,8 +4252,57 @@ In this example, in the row where y=10, there are 26 positions where a beacon ca
 
 ```elixir
 defmodule Day15Part1 do
+  def parse_report(input) do
+    %{
+      "sensor_x" => sensor_x,
+      "sensor_y" => sensor_y,
+      "beacon_x" => beacon_x,
+      "beacon_y" => beacon_y
+    } =
+      Regex.named_captures(
+        ~r/Sensor at x=(?<sensor_x>-?\d+), y=(?<sensor_y>-?\d+): closest beacon is at x=(?<beacon_x>-?\d+), y=(?<beacon_y>-?\d+)/,
+        input
+      )
+
+    {{sensor_x |> String.to_integer(), sensor_y |> String.to_integer()},
+     {beacon_x |> String.to_integer(), beacon_y |> String.to_integer()}}
+  end
+
+  def parse(input), do: input |> String.split("\n") |> Enum.map(&parse_report/1)
+
+  def manhattan_distance({{x1, y1}, {x2, y2}}), do: abs(x1 - x2) + abs(y1 - y2)
+
+  def beacon_free_positions({_, sensor_y}, row, manhattan_distance)
+      when manhattan_distance < abs(row - sensor_y),
+      do: []
+
+  def beacon_free_positions({sensor_x, sensor_y}, row, manhattan_distance) do
+    overlap = manhattan_distance - abs(row - sensor_y)
+    (sensor_x - overlap)..(sensor_x + overlap)
+  end
+
+  def beacon_free_positions({sensor, _} = sensor_report, row) do
+    sensor |> beacon_free_positions(row, sensor_report |> manhattan_distance)
+  end
+
+  def beacon_positions(sensor_reports, row),
+    do:
+      sensor_reports
+      |> Enum.filter(fn {_, {_, y}} -> y == row end)
+      |> Enum.map(fn {_, {x, _}} -> x end)
+      |> MapSet.new()
+
+  def count_beacon_free_positions(sensor_reports, row) do
+    sensor_reports
+    |> Enum.reduce(MapSet.new(), fn sensor_report, positions ->
+      sensor_report |> beacon_free_positions(row) |> MapSet.new() |> MapSet.union(positions)
+    end)
+    |> MapSet.difference(sensor_reports |> beacon_positions(row))
+    |> Enum.count()
+  end
+
   def calculate(input, row) do
-    input
+    input |> parse |> count_beacon_free_positions(row)
   end
 end
 ```
@@ -4264,6 +4313,8 @@ end
 defmodule ExampleTest do
   use ExUnit.Case
   import Day15Part1
+
+  assert {{8, 7}, {2, 10}} |> beacon_free_positions(10) == 2..14
 
   assert example |> calculate(10) == 26
 end
@@ -4276,5 +4327,5 @@ input = Kino.Input.textarea("Paste your puzzle input:")
 ```
 
 ```elixir
-input |> Kino.Input.read() |> Day15Part1.calculate()
+input |> Kino.Input.read() |> Day15Part1.calculate(2_000_000)
 ```
